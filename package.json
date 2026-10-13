@@ -1,0 +1,17 @@
+{
+  "name": "pardis-bale-bot",
+  "version": "1.0.0",
+  "private": true,
+  "description": "سرویسِ خواندنِ خودکارِ آگهی‌های ملکی از گروه‌های بله برای پردیس فاز ۱۱",
+  "main": "index.js",
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "start": "node index.js",
+    "test-parser": "node test-parser.js"
+  },
+  "dependencies": {
+    "firebase-admin": "^12.0.0"
+  }
+}
