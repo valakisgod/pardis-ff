@@ -1,0 +1,22 @@
+name: Poll Bale messages
+
+on:
+  schedule:
+    # هر ۱۰ دقیقه یک‌بار (زمان‌بندیِ GitHub گاهی چند دقیقه تأخیر داره، طبیعیه)
+    - cron: '*/10 * * * *'
+  workflow_dispatch: {}
+    # اجرای دستی از تبِ Actions توی گیت‌هاب، برای تست
+
+jobs:
+  poll:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - run: npm install
+      - run: node poll-once.js
+        env:
+          BALE_BOT_TOKEN: ${{ secrets.BALE_BOT_TOKEN }}
+          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
