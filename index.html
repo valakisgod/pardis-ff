@@ -1,0 +1,3679 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#faf9f5;color:#141413}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>پردیس · فاز ۱۱</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;500;700;900&display=swap" rel="stylesheet">
+<style>
+  /* تمِ روشن = «مدرنِ مینیمال»: پس‌زمینه‌ی سفید/خاکستری‌روشن و لهجه‌ی قرمز.
+     تمِ تاریک = «یاقوت در شب»: پس‌زمینه‌ی تیره‌ی آبی‌مایل‌به‌سیاه و لهجه‌ی یاقوتی.
+     هر دو از همون نام‌های متغیر (walnut/oak/brass/parchment/ink) استفاده می‌کنن که همه‌ی
+     اجزای برنامه از قبل بهشون وصلن؛ فقط مقدارشون بینِ دو تم فرق می‌کنه. */
+  :root{
+    --ink:#1A1A1A; --walnut-900:#1C1C1E; --walnut-800:#29292B; --walnut-700:#3A3A3D;
+    --oak-500:#B85C3E; --oak-400:#CF7C57; --brass-400:#D6362B; --brass-300:#E9584B; --brass-600:#A82A21;
+    --parchment-50:#FAFAFA; --parchment-100:#FFFFFF; --parchment-200:#EFEEEC; --panel-tint:#EFEEEC;
+    --line:rgba(0,0,0,.10); --shadow:rgba(0,0,0,.16);
+    --bg:var(--parchment-50); --surface:var(--parchment-100); --text:var(--ink); --sub:#6B6B6B;
+    --accent-ink:#FFFFFF;
+    box-sizing:border-box; padding-top:env(safe-area-inset-top,0px); padding-bottom:env(safe-area-inset-bottom,0px);
+  }
+  /* نکته‌ی مهم: parchment-50/100/200 فقط برای «نوشته‌ی روشن روی نوارهای همیشه‌تیره» (هدر، سرِ
+     مودال‌ها، نوارِ پایین، سایدبارِ ادمین — همشون background:var(--walnut-900/800) دارن که در
+     هر دو تم تیره‌ست) استفاده می‌شن؛ پس نباید بینِ تمِ روشن/تاریک عوض بشن، وگرنه توی تمِ تاریک
+     نوشته‌ی تیره روی نوارِ تیره می‌شینه و اصلاً خونده نمی‌شه (باگی که قبلاً اینجا بود).
+     thead (که زمینه‌ست نه نوشته‌ی روی نوار) از panel-tint استفاده می‌کنه که واقعاً بینِ دو تم عوض می‌شه. */
+  @media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
+    --ink:#EEF0F7; --walnut-900:#0D0F17; --walnut-800:#171A26; --walnut-700:#232737;
+    --oak-500:#C23A4F; --oak-400:#D85F71; --brass-400:#B3273F; --brass-300:#D14A5F; --brass-600:#7A1B2C;
+    --panel-tint:#262B3D;
+    --bg:#11131C; --surface:#1C2030; --text:#EEF0F7; --sub:#9AA0B8; --line:rgba(238,240,247,.14); --shadow:rgba(0,0,0,.5);
+    --accent-ink:#FFFFFF;
+  } }
+  :root[data-theme="dark"]{
+    --ink:#EEF0F7; --walnut-900:#0D0F17; --walnut-800:#171A26; --walnut-700:#232737;
+    --oak-500:#C23A4F; --oak-400:#D85F71; --brass-400:#B3273F; --brass-300:#D14A5F; --brass-600:#7A1B2C;
+    --panel-tint:#262B3D;
+    --bg:#11131C; --surface:#1C2030; --text:#EEF0F7; --sub:#9AA0B8; --line:rgba(238,240,247,.14); --shadow:rgba(0,0,0,.5);
+    --accent-ink:#FFFFFF;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0; background:var(--bg); color:var(--text); font-family:'Vazirmatn',Tahoma,'Segoe UI',sans-serif; -webkit-font-smoothing:antialiased;}
+  .hidden{display:none !important;}
+
+  .switcher{position:sticky; top:0; z-index:50; top:env(safe-area-inset-top,0px); display:flex; gap:8px;
+    justify-content:center; align-items:center; padding:10px; background:var(--walnut-900); border-bottom:1px solid var(--brass-400); flex-wrap:wrap;}
+  .switcher button{font-family:inherit; font-size:.85rem; padding:8px 18px; border-radius:20px; border:1px solid var(--brass-400); background:transparent; color:var(--parchment-100); cursor:pointer;}
+  .switcher button.active{background:var(--brass-400); color:var(--accent-ink); font-weight:700;}
+  .switcher .who{font-size:.72rem; color:var(--brass-300);}
+  .switcher button.sw-small{font-size:.74rem; padding:5px 12px;}
+  /* مودالِ ورودِ مدیر (Firebase Auth: ایمیل + رمز) */
+  #adminLoginModal{position:fixed; inset:0; z-index:120; background:rgba(20,10,5,.6); display:flex; align-items:center; justify-content:center; padding:20px;}
+  #adminLoginModal.hidden{display:none;}
+  #adminLoginModal .a-form{width:100%; max-width:360px;}
+  #adminLoginModal .al-close{background:none !important; border:none; color:var(--sub) !important; font-size:.8rem; cursor:pointer; float:left; padding:0 !important; width:auto !important; margin:0 !important; font-weight:400 !important;}
+  #adminLoginError{color:var(--brass-400); font-size:.8rem; margin-top:8px; min-height:1em;}
+  #adminView{display:none;} body.show-admin #adminView{display:block;} body.show-admin #userView{display:none;}
+
+  #userView{max-width:430px; margin:26px auto 60px; border:10px solid var(--walnut-900); border-radius:34px; box-shadow:0 30px 50px -18px var(--shadow); overflow:hidden; background:var(--bg);}
+  .u-top{background:linear-gradient(var(--walnut-900),var(--walnut-800)); color:var(--parchment-50); padding:16px 18px; position:relative;}
+  /* ویجتِ «کپسولِ دوتکه»: ساعت و تاریخ توی یه نوارِ کپسولیِ یکپارچه کنارِ هم — تکه‌ی ساعت
+     با رنگِ برنزیِ برنامه پر شده و تکه‌ی تاریخ شیشه‌ای و کم‌رنگ‌تره. */
+  .clock-widget{display:inline-flex; border-radius:999px; overflow:hidden; border:1px solid rgba(255,255,255,.18);
+    box-shadow:0 4px 12px rgba(0,0,0,.25);}
+  .clock-digital{font-family:inherit; font-size:.82rem; font-weight:800; letter-spacing:.3px;
+    color:#fff; background:var(--brass-400); padding:6px 13px; direction:ltr;}
+  .clock-date{font-family:inherit; font-size:.72rem; font-weight:600; color:var(--parchment-100);
+    background:rgba(255,255,255,.06); padding:6px 13px;}
+  .u-top h1{font-size:1.15rem; margin:8px 0 0; font-weight:700;}
+  .u-top-row{display:flex; align-items:center; justify-content:space-between; position:relative;}
+  .nav-burger{background:transparent; border:1px solid var(--brass-300); color:var(--parchment-50); font-size:1.05rem; width:34px; height:34px; border-radius:8px; cursor:pointer; line-height:1; font-family:inherit;}
+  .nav-menu{position:absolute; top:42px; left:0; z-index:50; background:var(--surface); border:1px solid var(--line); border-radius:12px; box-shadow:0 8px 24px rgba(0,0,0,.3); min-width:170px; overflow:hidden;}
+  .nav-menu.hidden{display:none;}
+  .nav-menu button{display:block; width:100%; text-align:right; padding:11px 14px; border:none; border-bottom:1px solid var(--line); background:none; color:var(--text); font-family:inherit; font-size:.82rem; cursor:pointer;}
+  .nav-menu button:last-child{border-bottom:none;}
+  .nav-menu button.on{background:var(--brass-400); color:var(--accent-ink); font-weight:700;}
+
+  /* نوارِ پایینِ صفحه: منوی اصلیِ برنامه (اکسپلور/انتخاب دستی/کوهسار و غدیر/خواهان) —
+     یه نوارِ کپسولیِ شناور ته صفحه، هم‌خانواده‌ی رنگیِ تمِ برنامه. */
+  #userView{padding-bottom:92px;}
+  .bottom-nav{position:fixed; right:0; left:0; bottom:14px; z-index:60; margin:0 auto;
+    max-width:410px; width:calc(100% - 28px); display:flex; align-items:center; justify-content:space-between;
+    gap:4px; background:linear-gradient(var(--walnut-900),var(--walnut-800)); border:1px solid var(--brass-400);
+    border-radius:26px; padding:8px 6px; box-shadow:0 14px 34px -10px rgba(0,0,0,.5);
+    padding-bottom:calc(8px + env(safe-area-inset-bottom,0px));}
+  .bn-item{flex:1; display:flex; flex-direction:column; align-items:center; gap:3px; background:none; border:none;
+    cursor:pointer; font-family:inherit; color:var(--parchment-100); padding:7px 2px 6px; border-radius:16px; transition:background .12s ease, color .12s ease;}
+  .bn-ic{font-size:1.15rem; line-height:1;}
+  .bn-label{font-size:.64rem; font-weight:600; color:inherit; white-space:nowrap;}
+  .bn-item.on{color:var(--brass-400);}
+  .bn-item.on .bn-ic{transform:translateY(-1px);}
+
+  /* کتابخانه‌ی تزئینیِ بالای صفحه: قفسه‌ها دور تا دورِ همون پنجره‌ی گرد و جغدِ عینکیِ قبلی،
+     به‌علاوه‌ی یه چراغ مطالعه‌ی نخ‌کشیدنی و یه نقشه‌ی کوچیک لای کتاب‌ها */
+  .roof-scene{display:flex; justify-content:center; margin:-4px 0 4px; perspective:600px;}
+  .roof-scene svg{width:340px; max-width:100%; height:auto; overflow:visible;}
+  .roof-float{transform-origin:110px 64px; animation:roofSway 6s ease-in-out infinite;}
+  @keyframes roofSway{
+    0%,100%{transform:rotateY(0deg) translateY(0);}
+    50%{transform:rotateY(4deg) translateY(-2px);}
+  }
+  .twinkle, .owl-pupil{transform-box:fill-box; transform-origin:center;}
+  .twinkle{animation:twinkle 2.4s ease-in-out infinite;}
+  .twinkle.d1{animation-delay:0s;} .twinkle.d2{animation-delay:.4s;}
+  .twinkle.d3{animation-delay:.8s;} .twinkle.d4{animation-delay:1.2s;}
+  .twinkle.d5{animation-delay:1.6s;}
+  @keyframes twinkle{0%,100%{opacity:.25; transform:scale(.7);} 50%{opacity:1; transform:scale(1.15);}}
+  .roof-owl{animation:owlBob 3.6s ease-in-out infinite;}
+  @keyframes owlBob{0%,100%{transform:translate(110px,70px) rotate(0deg);} 50%{transform:translate(110px,68px) rotate(-1.5deg);}}
+  .owl-pupil{animation:owlBlink 5s ease-in-out infinite;}
+  @keyframes owlBlink{0%,92%,100%{transform:scaleY(1);} 95%{transform:scaleY(.1);}}
+
+  /* آسمونِ پشتِ پنجره: پیش‌فرض روزه، زیر data-theme=dark (یا سیستم تاریک) شبانه‌ی پرستاره می‌شه */
+  .window-sky-night, .roof-stars{opacity:0; transition:opacity .6s ease;}
+  .roof-sun{opacity:1; transition:opacity .6s ease;}
+  :root[data-theme="dark"] .window-sky-night, :root[data-theme="dark"] .roof-stars{opacity:1;}
+  :root[data-theme="dark"] .roof-sun{opacity:0;}
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]) .window-sky-night, :root:not([data-theme="light"]) .roof-stars{opacity:1;}
+    :root:not([data-theme="light"]) .roof-sun{opacity:0;}
+  }
+
+  /* چراغ مطالعه: نخش رو که می‌کشی (کلیک/لمس) هم روشن‌خاموش خودش عوض می‌شه هم مودِ کل برنامه */
+  .lamp-pull{cursor:pointer;}
+  .lamp-pull .lamp-pull-rod{transition:transform .15s ease;}
+  #lampGroup.pulling .lamp-pull-rod{transform:translateY(4px);}
+  .lamp-glow{opacity:0; transition:opacity .35s ease;}
+  .lamp-bulb{fill:#8f8064; transition:fill .35s ease;}
+  #lampGroup.lamp-on .lamp-glow{opacity:.85;}
+  #lampGroup.lamp-on .lamp-bulb{fill:#ffd977;}
+  .u-filters{display:flex; gap:8px; padding:12px 14px; overflow-x:auto;}
+  .u-search{padding:12px 14px 0;}
+  .u-search input{width:100%; padding:10px 14px; border-radius:12px; border:1px solid var(--line); background:var(--surface);
+    color:var(--text); font-family:inherit; font-size:.85rem;}
+  .u-search input::placeholder{color:var(--sub);}
+  .u-pricerange{display:flex; align-items:center; gap:8px; padding:0 14px 12px;}
+  .u-pricerange input{flex:1; min-width:0; padding:8px 10px; border-radius:10px; border:1px solid var(--line); background:var(--surface);
+    color:var(--text); font-family:inherit; font-size:.8rem; direction:ltr; text-align:right;}
+  .u-pricerange input::placeholder{color:var(--sub); text-align:right;}
+  .u-pricerange span{color:var(--sub); font-size:.76rem; flex-shrink:0;}
+  .save-btn{position:absolute; left:10px; top:10px; background:none; border:none; font-size:1.05rem; cursor:pointer; line-height:1; padding:4px; opacity:.4;}
+  .save-btn.saved{opacity:1;}
+  .u-card{position:relative;}
+  .hint{font-size:.74rem; color:var(--sub); margin:6px 0;}
+
+  /* بخش «رویدادها»: به‌جای یک صفحه‌ی بلند با همه‌چیز زیر هم، چند زیرتبِ کارتی —
+     یادداشت/رویدادها/معاملات/مخاطبین/یادآوری — که هر کدوم جدا و تمیز دیده می‌شه */
+  .ev-tabs{display:flex; gap:7px; padding:12px 14px 4px; overflow-x:auto;}
+  .ev-tab{flex:none; display:flex; align-items:center; gap:5px; font-family:inherit; font-size:.78rem;
+    padding:8px 13px; border-radius:16px; border:1px solid var(--line); background:var(--surface); color:var(--sub); cursor:pointer;}
+  .ev-tab.on{background:var(--brass-400); color:var(--accent-ink); border-color:var(--brass-400); font-weight:700;}
+  .ev-tab-ic{font-size:.9rem;}
+  .ev-tab-badge{display:inline-block; min-width:16px; text-align:center; font-size:.66rem; font-weight:700;
+    background:rgba(0,0,0,.14); color:inherit; border-radius:8px; padding:1px 5px; line-height:1.4;}
+  .ev-tab.on .ev-tab-badge{background:rgba(42,24,16,.22);}
+  .ev-pane{padding:4px 14px 18px;}
+  .ev-pane.hidden{display:none;}
+  .ev-card{background:var(--surface); border:1px solid var(--line); border-radius:14px; padding:16px;}
+  .ev-card-head{display:flex; gap:10px; align-items:flex-start; margin-bottom:12px;}
+  .ev-card-ic{font-size:1.3rem; line-height:1;}
+  .ev-card-head h3{margin:0 0 3px; font-size:.98rem;}
+  .ev-card-head .hint{margin:0;}
+  .ev-card textarea{width:100%; min-height:120px; border:1px solid var(--line); border-radius:10px; padding:10px; font-family:inherit; font-size:.85rem; resize:vertical; background:var(--bg); color:var(--text); box-sizing:border-box;}
+  .ev-card > button{margin-top:10px;}
+  .deal-step{display:inline-flex; align-items:center; justify-content:center; width:18px; height:18px; margin-left:6px;
+    border-radius:50%; background:var(--brass-400); color:var(--accent-ink); font-size:.68rem; font-weight:700; flex:none;}
+  .alarm-form{display:flex; flex-wrap:wrap; gap:8px; margin:10px 0;}
+  .alarm-form input{flex:1; min-width:150px; padding:8px 10px; border-radius:8px; border:1px solid var(--line); background:var(--bg); color:var(--text); font-family:inherit; font-size:.8rem; box-sizing:border-box;}
+  .alarm-row{display:flex; flex-direction:column; gap:4px; background:var(--bg);
+    border:1px solid var(--line); border-right:3px solid var(--brass-400); border-radius:8px; padding:9px 12px; font-size:.82rem; margin-bottom:8px;}
+  .alarm-row.alarm-fired{opacity:.55; border-right-color:var(--sub);}
+  .alarm-row-top{display:flex; justify-content:space-between; align-items:center; gap:10px;}
+  .alarm-info{display:flex; align-items:center; gap:6px;}
+  .alarm-info .alarm-ic{font-size:.95rem;}
+  .alarm-done{color:var(--brass-300);}
+
+  /* دکمه‌های اصلیِ کارت‌ها (ذخیره/افزودن رویداد/افزودن مخاطب/افزودن معامله/تنظیم آلارم): یه ظاهرِ
+     سه‌بعدی و رنگیِ هم‌خانواده با تمِ برنزی/گردوییِ برنامه، به‌جای دکمه‌ی خاکستریِ پیش‌فرضِ مرورگر.
+     بعداً که تمِ کلیِ برنامه عوض بشه، همین کلاس دوباره رنگ‌آمیزی می‌شه. */
+  .btn-brass{
+    font-family:inherit; font-size:.85rem; font-weight:700; cursor:pointer;
+    padding:11px 20px; border-radius:11px; border:none; color:var(--accent-ink);
+    background:linear-gradient(180deg, var(--brass-300), var(--brass-400) 55%, var(--brass-600) 100%);
+    box-shadow:0 3px 0 var(--brass-600), 0 6px 14px -4px rgba(0,0,0,.45), inset 0 1px 0 rgba(255,255,255,.55);
+    transition:transform .08s ease, box-shadow .08s ease;
+  }
+  .btn-brass:hover{filter:brightness(1.05);}
+  .btn-brass:active{transform:translateY(3px); box-shadow:0 0 0 var(--brass-600), inset 0 2px 6px rgba(0,0,0,.25);}
+  .btn-brass.btn-ghost{
+    background:linear-gradient(180deg, var(--surface), var(--bg) 100%); color:var(--sub);
+    box-shadow:0 3px 0 var(--line), inset 0 1px 0 rgba(255,255,255,.08);
+  }
+
+  /* انتخابگرِ تاریخ و ساعتِ شمسی (به‌جای ورودیِ میلادیِ پیش‌فرضِ مرورگر) — دکمه‌ای که تاریخِ
+     انتخاب‌شده رو شمسی نشون می‌ده و با کلیک، تقویمِ خودِ برنامه (دیزاین‌شده با همین تمِ برنزی) باز می‌شه */
+  .jalali-trigger{width:100%; text-align:right;}
+  #jalaliPickerModal{position:fixed; inset:0; z-index:110; background:rgba(20,10,5,.6); display:flex; align-items:flex-end; justify-content:center;}
+  #jalaliPickerModal.hidden{display:none;}
+  .jp-box{background:var(--bg); width:100%; max-width:430px; max-height:88vh; border-radius:18px 18px 0 0; overflow:hidden; display:flex; flex-direction:column;
+    padding-bottom:env(safe-area-inset-bottom,0px);}
+  .jp-head{display:flex; justify-content:space-between; align-items:center; padding:14px 18px; background:linear-gradient(var(--walnut-900),var(--walnut-800)); color:var(--parchment-50);}
+  .jp-head button{background:none; border:none; color:var(--parchment-50); font-size:1.1rem; cursor:pointer;}
+  .jp-body{padding:14px 18px; overflow-y:auto;}
+  .jp-nav{display:flex; align-items:center; justify-content:space-between; margin-bottom:10px;}
+  .jp-nav button{width:32px; height:32px; border-radius:50%; border:1px solid var(--line); background:var(--surface); color:var(--text); font-size:1rem; cursor:pointer;
+    box-shadow:0 2px 0 rgba(0,0,0,.1);}
+  .jp-nav button:active{transform:translateY(2px); box-shadow:none;}
+  .jp-nav b{font-size:.95rem;}
+  .jp-weekdays{display:grid; grid-template-columns:repeat(7,1fr); gap:4px; margin-bottom:4px;}
+  .jp-weekdays span{text-align:center; font-size:.68rem; color:var(--sub);}
+  .jp-days{display:grid; grid-template-columns:repeat(7,1fr); gap:4px;}
+  .jp-day{aspect-ratio:1; border-radius:9px; border:1px solid var(--line); background:var(--surface); color:var(--text); font-family:inherit; font-size:.78rem; cursor:pointer;
+    box-shadow:0 2px 0 rgba(0,0,0,.08); transition:transform .08s ease;}
+  .jp-day:active{transform:translateY(2px); box-shadow:none;}
+  .jp-day.jp-today{border-color:var(--brass-400); color:var(--brass-400); font-weight:700;}
+  .jp-day.jp-selected{background:var(--brass-400); color:var(--accent-ink); border-color:var(--brass-400); font-weight:700; box-shadow:0 2px 0 var(--brass-600);}
+  .jp-day.jp-empty{visibility:hidden; cursor:default; box-shadow:none;}
+  .jp-time{display:flex; align-items:center; justify-content:center; gap:10px; margin:16px 0 6px;}
+  .jp-time select{font-family:inherit; font-size:1.1rem; font-weight:700; padding:8px 10px; border-radius:9px; border:1px solid var(--line); background:var(--surface); color:var(--text);}
+  .jp-time span{font-size:1.1rem; font-weight:700; color:var(--sub);}
+
+  /* زنگِ آلارم: به‌جای یه alert()ِ یک‌بارمصرف، یه پنلِ تمام‌صفحه‌ی خودِ برنامه که تا خودِ کاربر
+     دکمه‌ی «قطع آلارم» رو نزنه، هم روی صفحه می‌مونه هم صدا رو (با یه فاصله‌ی چندثانیه‌ای) تکرار می‌کنه. */
+  #alarmRingModal{position:fixed; inset:0; z-index:200; background:rgba(20,10,5,.78); display:flex; align-items:center; justify-content:center; padding:20px;}
+  #alarmRingModal.hidden{display:none;}
+  .ring-box{background:var(--surface); border:2px solid var(--brass-400); border-radius:22px; max-width:360px; width:100%;
+    padding:28px 22px; text-align:center; box-shadow:0 20px 50px -12px rgba(0,0,0,.6);}
+  .ring-ic{font-size:3rem; animation:ringShake 1s ease-in-out infinite;}
+  @keyframes ringShake{0%,100%{transform:rotate(0deg);} 20%{transform:rotate(-12deg);} 40%{transform:rotate(10deg);} 60%{transform:rotate(-8deg);} 80%{transform:rotate(6deg);}}
+  .ring-title{font-size:1.05rem; font-weight:700; margin:10px 0 4px;}
+  .ring-label{color:var(--sub); font-size:.88rem; margin-bottom:4px;}
+  .ring-time{color:var(--brass-400); font-weight:700; font-size:.9rem; margin-bottom:18px;}
+  .ring-stop{width:100%; font-size:1rem; padding:14px;}
+  .ring-queue-note{margin-top:10px; font-size:.72rem; color:var(--sub);}
+
+  /* «اعلانات فعال»: هر بار رویداد/معامله/مخاطب/آلارم ذخیره بشه، یه خط خلاصه این‌جا هم اضافه می‌شه */
+  .notif-row{display:flex; justify-content:space-between; align-items:flex-start; gap:10px; background:var(--bg);
+    border:1px solid var(--line); border-right:3px solid var(--brass-400); border-radius:8px; padding:9px 12px; font-size:.82rem; margin-bottom:8px;}
+  .notif-info{display:flex; align-items:flex-start; gap:6px;}
+  .notif-info .notif-ic{font-size:.95rem;}
+  .notif-meta{color:var(--sub); font-size:.72rem; margin-top:3px;}
+  .notif-dismiss{background:none; border:none; color:var(--sub); font-size:.95rem; cursor:pointer; flex:none;}
+
+  .inline-form{display:flex; flex-wrap:wrap; gap:8px; margin:10px 0;}
+  .inline-form input, .inline-form textarea{flex:1; min-width:140px; padding:8px 10px; border-radius:8px; border:1px solid var(--line); background:var(--bg); color:var(--text); font-family:inherit; font-size:.8rem; box-sizing:border-box;}
+  .inline-form textarea{min-height:56px; resize:vertical; flex-basis:100%;}
+
+  /* ربطِ اختیاریِ یک مخاطب/معامله به یه معامله/رویداد/آلارمِ دیگه — «ترکیبِ» بخش‌های رویدادها.
+     یه ردیفِ کوچیک از select باز می‌شه؛ پیش‌فرضش «هیچ‌کدام»، یعنی کاملاً دلبخواهیه. */
+  .rel-row{display:flex; flex-wrap:wrap; gap:8px; margin:0 0 10px;}
+  .rel-row select{flex:1; min-width:150px; padding:8px 10px; border-radius:8px; border:1px dashed var(--line); background:var(--surface); color:var(--sub); font-family:inherit; font-size:.78rem; box-sizing:border-box;}
+  .rel-row select:not([value=""]){color:var(--text);}
+  .rel-chips{display:flex; flex-wrap:wrap; gap:5px; margin-top:6px;}
+  .rel-chip{display:inline-flex; align-items:center; gap:3px; font-size:.7rem; background:var(--surface); border:1px solid var(--line); color:var(--sub); border-radius:10px; padding:2px 8px;}
+  .combo-sep{font-size:.76rem; font-weight:700; color:var(--sub); margin:16px 0 8px; padding-top:12px; border-top:1px dashed var(--line); display:flex; align-items:center; gap:6px;}
+  .combo-sep:first-of-type{margin-top:4px; padding-top:0; border-top:none;}
+  .item-row{background:var(--bg); border:1px solid var(--line); border-radius:8px; padding:10px 12px; font-size:.82rem; margin-bottom:8px;}
+  .item-row .item-meta{color:var(--sub); font-size:.72rem; margin-top:4px;}
+  .item-row .item-actions{display:flex; gap:6px; margin-top:8px;}
+  .item-row textarea, .item-row input{width:100%; box-sizing:border-box; padding:8px 10px; border-radius:8px; border:1px solid var(--line); background:var(--surface); color:var(--text); font-family:inherit; font-size:.8rem; margin-bottom:6px;}
+  .deal-form{display:flex; flex-direction:column; gap:14px; margin:10px 0;}
+  .deal-field label{display:block; font-size:.8rem; margin-bottom:6px; color:var(--text);}
+  .radio-row{display:flex; gap:16px; flex-wrap:wrap; font-size:.82rem;}
+  .radio-row label{display:flex; align-items:center; gap:6px; margin:0; cursor:pointer; color:var(--text);}
+  .deal-field input[type=text], .deal-field input[type=number]{width:100%; box-sizing:border-box; padding:8px 10px; border-radius:8px; border:1px solid var(--line); background:var(--bg); color:var(--text); font-family:inherit; font-size:.8rem;}
+  .manual-grid{display:grid; grid-template-columns:repeat(auto-fill,minmax(64px,1fr)); gap:8px; padding:14px;}
+  .manual-grid.small{grid-template-columns:repeat(auto-fill,minmax(36px,1fr)); gap:6px;}
+  .manual-grid button{padding:10px 4px; border-radius:8px; border:1px solid var(--line); background:var(--surface); color:var(--text); font-family:inherit; font-size:.8rem; cursor:pointer;}
+  .manual-grid.small button{padding:8px 2px; font-size:.72rem;}
+  .manual-grid button.has-listings{background:var(--brass-400); color:var(--accent-ink); font-weight:700; border-color:var(--brass-400);}
+  .mini-back{margin:12px 14px 0; padding:7px 14px; border-radius:8px; border:1px solid var(--line); background:var(--surface); color:var(--sub); font-family:inherit; font-size:.8rem; cursor:pointer;}
+  .chip{flex:none; font-size:.78rem; padding:6px 14px; border-radius:16px; border:1px solid var(--line); color:var(--sub); background:var(--surface); cursor:pointer;}
+  .chip.on{background:var(--brass-400); color:var(--accent-ink); border-color:var(--brass-400); font-weight:700;}
+  .u-sort{display:flex; gap:8px; padding:0 14px 12px; overflow-x:auto;}
+  .u-list{padding:4px 14px 16px; display:flex; flex-direction:column; gap:12px; min-height:80px;}
+  .u-card{display:flex; gap:12px; background:var(--surface); border:1px solid var(--line); border-radius:14px; padding:12px; cursor:pointer;}
+  .u-card:active{opacity:.85;}
+  .dup-badge{display:inline-block; font-size:.62rem; font-weight:700; background:#b0503f; color:#fff; border-radius:6px; padding:1px 7px; margin-right:6px; vertical-align:middle;}
+  /* نشانِ کوچیکِ «این فایل عکس/ویدیو داره» روی کارتِ لیست؛ اگه فایل عکس/ویدیو نداشته باشه هیچ‌چی اضافه نمی‌شه. */
+  .media-badge{display:inline-block; font-size:.72rem; background:var(--brass-400); color:#fff; border-radius:6px; padding:1px 6px; margin-right:6px; vertical-align:middle;}
+  /* وضعیتِ فایل (رزرو/در حالِ مذاکره/فروخته شد) روی کارت و جزئیات؛ وقتی وضعیتی ثبت نشده هیچ نشانی نیست. */
+  .status-badge{display:inline-block; font-size:.68rem; font-weight:700; color:#fff; border-radius:6px; padding:1px 8px; margin-right:6px; vertical-align:middle;}
+  .status-badge.status-reserved{background:var(--oak-500);}
+  .status-badge.status-negotiating{background:var(--brass-600);}
+  .status-badge.status-sold{background:#6b6b6b;}
+  /* نشانِ «این فایل خودکار از گروهِ بله خونده شده» — تا ادمین بدونه هنوز دستی تأیید/بازبینی نشده. */
+  .bale-badge{display:inline-block; font-size:.62rem; font-weight:700; background:#3f6fb0; color:#fff; border-radius:6px; padding:1px 7px; margin-right:6px; vertical-align:middle;}
+  .mini-select{font-family:inherit; font-size:.76rem; padding:3px 6px; border-radius:7px; border:1px solid var(--line); background:var(--surface); color:var(--text);}
+  .btn-whatsapp{display:flex; align-items:center; justify-content:center; gap:6px; width:100%; margin-top:10px; padding:10px; border:none; border-radius:10px;
+    background:#25D366; color:#fff; font-family:inherit; font-size:.85rem; font-weight:700; cursor:pointer;}
+  #detailModal{position:fixed; inset:0; z-index:100; background:rgba(20,10,5,.6); display:flex; align-items:flex-end; justify-content:center;}
+  #detailModal.hidden{display:none;}
+  .detail-box{background:var(--bg); width:100%; max-width:480px; max-height:80vh; border-radius:18px 18px 0 0; overflow:hidden; display:flex; flex-direction:column;
+    padding-bottom:env(safe-area-inset-bottom,0px);}
+  .detail-head{display:flex; justify-content:space-between; align-items:center; padding:14px 18px; background:linear-gradient(var(--walnut-900),var(--walnut-800)); color:var(--parchment-50);}
+  .detail-head button{background:none; border:none; color:var(--parchment-50); font-size:1.1rem; cursor:pointer;}
+  #detailBody{padding:16px 18px; overflow-y:auto;}
+  .detail-info{display:flex; flex-direction:column; gap:5px; margin-bottom:12px; font-size:.88rem;}
+  .detail-info .price{color:var(--brass-400); font-weight:700; direction:ltr; text-align:right;}
+  .detail-info .phone a{color:var(--brass-400); font-weight:600; direction:ltr; text-decoration:none;}
+  .dup-note{background:var(--surface); border:1px solid #b0503f; border-radius:10px; padding:8px 12px; margin-bottom:12px; font-size:.8rem; color:var(--sub);}
+  .dup-note ul{margin:6px 0 0; padding-right:18px;}
+  .detail-label{font-size:.78rem; color:var(--sub); margin:0 0 6px;}
+  .raw-text{direction:rtl; text-align:right; word-break:break-word; white-space:pre-wrap; font-family:inherit; font-size:.85rem; line-height:1.9; background:var(--surface); border:1px solid var(--line); border-radius:10px; padding:12px; margin:0;}
+  .u-card h3{margin:0; font-size:.96rem;}
+  .u-card .meta{color:var(--sub); font-size:.78rem; margin-top:4px;}
+  .u-card-body{flex:1; min-width:0;}
+  .u-card .price{color:var(--brass-400); font-size:.9rem; margin-top:5px; font-weight:700; direction:ltr; text-align:right;}
+  .u-card .phone{color:var(--brass-400); font-size:.78rem; margin-top:5px; font-weight:600; direction:ltr; text-align:right;}
+  .u-card .time{color:var(--sub); font-size:.72rem; margin-top:6px;}
+  .empty{color:var(--sub); font-size:.85rem; text-align:center; padding:30px 10px;}
+
+  /* نمایشگرِ نقشه: زوم و جابه‌جایی با ماوس/لمس، دقیقاً مثلِ یه نقشه‌ی آنلاینِ معمولی —
+     ویوپورت با overflow:hidden و خودِ عکس با transform: translate+scale جابه‌جا/بزرگ می‌شه. */
+  .map-viewer{position:relative; margin:4px 14px 14px; border-radius:14px; overflow:hidden;
+    border:1px solid var(--line); background:var(--surface);}
+  .map-viewport{position:relative; width:100%; height:62vh; max-height:560px; min-height:320px;
+    overflow:hidden; touch-action:none; cursor:grab; background:repeating-conic-gradient(var(--bg) 0% 25%, var(--surface) 0% 50%) 50%/16px 16px;}
+  .map-viewport.dragging{cursor:grabbing;}
+  .map-viewport img{position:absolute; top:50%; left:50%; max-width:none; transform-origin:0 0;
+    transform:translate(-50%,-50%); user-select:none; -webkit-user-drag:none; will-change:transform;}
+  .map-controls{position:absolute; left:10px; bottom:10px; display:flex; flex-direction:column; gap:6px; z-index:5;}
+  .map-controls button{width:36px; height:36px; border-radius:10px; border:1px solid var(--brass-400);
+    background:var(--walnut-900); color:var(--accent-ink); font-size:1.05rem; font-weight:700; cursor:pointer;
+    box-shadow:0 3px 8px rgba(0,0,0,.35); font-family:inherit; line-height:1;}
+  .map-controls button:active{transform:translateY(1px);}
+  .map-hint{font-size:.7rem; color:var(--sub); text-align:center; padding:7px 10px;}
+  #mapTypeChips{padding-top:14px;}
+
+  #adminView{max-width:1180px; margin:0 auto; padding:24px;}
+  .a-shell{display:grid; grid-template-columns:230px 1fr; border:1px solid var(--line); border-radius:16px; overflow:hidden; min-height:600px;}
+  .a-side{background:linear-gradient(var(--walnut-900),var(--walnut-800)); color:var(--parchment-100); padding:22px 16px;}
+  .a-side .brand{font-weight:700; margin-bottom:22px; color:var(--parchment-50);}
+  .a-side .brand small{display:block; font-size:.7rem; color:var(--brass-300); font-weight:400;}
+  .a-main{background:var(--bg); padding:26px 28px;}
+  .a-topbar{display:flex; justify-content:space-between; align-items:center; margin-bottom:22px;}
+  .a-topbar h2{margin:0; font-size:1.2rem;}
+  .a-user-pill{font-size:.8rem; color:var(--sub); background:var(--surface); border:1px solid var(--line); border-radius:18px; padding:6px 14px;}
+  .a-stats{display:grid; grid-template-columns:repeat(4,1fr); gap:14px; margin-bottom:24px;}
+  .a-stat{background:var(--surface); border:1px solid var(--line); border-radius:10px; padding:14px 16px;}
+  .a-stat b{display:block; font-size:1.4rem; color:var(--brass-400);}
+  .a-stat span{font-size:.78rem; color:var(--sub);}
+  .a-panels{display:grid; grid-template-columns:1.4fr 1fr; gap:18px; align-items:start;}
+  table{width:100%; border-collapse:collapse; background:var(--surface); border:1px solid var(--line); border-radius:10px; overflow:hidden; font-size:.84rem;}
+  thead{background:var(--panel-tint);}
+  th,td{padding:9px 10px; text-align:right; border-bottom:1px solid var(--line);}
+  tr:last-child td{border-bottom:none;}
+  .badge{font-size:.7rem; padding:2px 9px; border-radius:10px; background:var(--brass-400); color:var(--accent-ink); font-weight:700;}
+  .mini{font-size:.72rem; padding:3px 8px; border-radius:6px; border:1px solid var(--line); background:var(--bg); color:var(--sub); cursor:pointer;}
+  .a-form{background:var(--surface); border:1px solid var(--line); border-radius:10px; padding:18px;}
+  .a-form h3{margin:0 0 12px; font-size:1rem;}
+  .a-form label{display:block; font-size:.8rem; color:var(--sub); margin:10px 0 5px;}
+  .a-form input,.a-form select{width:100%; padding:9px 10px; border-radius:7px; border:1px solid var(--line); background:var(--bg); color:var(--text); font-family:inherit; font-size:.86rem;}
+  .a-form textarea{width:100%; min-height:220px; resize:vertical; padding:12px; border-radius:9px; border:1px solid var(--line); background:var(--bg); color:var(--text); font-family:inherit; font-size:.86rem; line-height:1.8;}
+  .a-form .hint{font-size:.74rem; color:var(--sub); margin-top:6px;}
+  .a-form button{margin-top:14px; width:100%; padding:11px; border:none; border-radius:8px; background:var(--brass-400); color:var(--accent-ink); font-weight:700; font-family:inherit; cursor:pointer;}
+  .row2{display:grid; grid-template-columns:1fr 1fr; gap:10px;}
+  .notice{max-width:640px; margin:60px auto; text-align:center; color:var(--sub); font-size:.9rem; padding:0 20px;}
+  .table-pager{display:flex; justify-content:space-between; align-items:center; gap:10px; padding:10px 4px; font-size:.78rem; color:var(--sub);}
+  .table-pager .pager-btns{display:flex; gap:6px;}
+  .table-pager button{font-size:.74rem; padding:5px 12px; border-radius:6px; border:1px solid var(--line); background:var(--surface); color:var(--text); cursor:pointer; font-family:inherit;}
+  .table-pager button:disabled{opacity:.4; cursor:default;}
+  .table-pager .pager-info{white-space:nowrap;}
+  .manage-row{display:flex; align-items:center; gap:10px; background:var(--bg); border:1px solid var(--line); border-radius:8px; padding:9px 12px; font-size:.82rem; margin-bottom:8px;}
+  .manage-row input[type=checkbox]{width:16px; height:16px; accent-color:var(--brass-400); cursor:pointer; flex:none;}
+  .manage-row .manage-info{flex:1; min-width:0;}
+  .manage-row .manage-time{color:var(--sub); font-size:.72rem;}
+  .manage-group-label{font-size:.72rem; color:var(--sub); margin:12px 0 4px;}
+  .manage-group-label:first-child{margin-top:0;}
+  @media(max-width:900px){ .a-panels{grid-template-columns:1fr;} .a-stats{grid-template-columns:repeat(2,1fr);} .a-shell{grid-template-columns:1fr;} .a-side{display:none;} }
+</style>
+</head>
+<body class="show-user">
+
+<div class="switcher" id="switcher">
+  <button id="btnUser" class="active" onclick="setMode('user')">نمای کاربر · موبایل</button>
+  <button id="btnAdmin" class="hidden" onclick="enterAdminMode()">نمای مدیریت · دسکتاپ</button>
+  <button id="btnAdminLogin" class="sw-small hidden" onclick="openAdminLogin()">ورود مدیر</button>
+  <button id="btnAdminLogout" class="sw-small hidden" onclick="adminLogout()">خروج</button>
+  <span class="who" id="whoBadge">در حال اتصال…</span>
+</div>
+
+<div id="notReady" class="notice">در حال اتصال به دیتابیس زنده…</div>
+
+<!-- ============ USER (mobile) ============ -->
+<div id="userView" class="hidden">
+  <div class="u-top">
+    <div class="roof-scene" aria-hidden="true">
+      <svg viewBox="0 -28 220 138" preserveAspectRatio="xMidYMax meet">
+        <defs>
+          <linearGradient id="shelfWood" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stop-color="#6b4226"/>
+            <stop offset="100%" stop-color="#3a2314"/>
+          </linearGradient>
+          <linearGradient id="shelfBoardGrad" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stop-color="#2a1810"/>
+            <stop offset="100%" stop-color="#1a0f08"/>
+          </linearGradient>
+          <radialGradient id="windowSkyDay" cx="40%" cy="30%" r="80%">
+            <stop offset="0%" stop-color="#cdeaf9"/>
+            <stop offset="55%" stop-color="#8fcbf0"/>
+            <stop offset="100%" stop-color="#5a9fdc"/>
+          </radialGradient>
+          <radialGradient id="windowSkyNight" cx="40%" cy="35%" r="75%">
+            <stop offset="0%" stop-color="#2a2f5e"/>
+            <stop offset="55%" stop-color="#171a3d"/>
+            <stop offset="100%" stop-color="#0a0b22"/>
+          </radialGradient>
+          <radialGradient id="windowGlow" cx="50%" cy="50%" r="50%">
+            <stop offset="0%" stop-color="#fff" stop-opacity=".16"/>
+            <stop offset="100%" stop-color="#fff" stop-opacity="0"/>
+          </radialGradient>
+        </defs>
+
+        <g class="roof-float">
+          <!-- قابِ چوبیِ کتابخانه، دور تا دورِ پنجره -->
+          <rect x="3" y="2" width="214" height="62" rx="7" fill="url(#shelfWood)" stroke="#2a1810" stroke-width="2"/>
+          <rect x="4" y="23" width="212" height="3" fill="url(#shelfBoardGrad)"/>
+          <rect x="4" y="44" width="212" height="3" fill="url(#shelfBoardGrad)"/>
+          <!-- قفسه‌های کتاب، سمت چپ و راستِ پنجره (خودِ کتاب‌ها با جاوااسکریپت ساخته می‌شن) -->
+          <g id="shelfBooksLeftTop"></g>
+          <g id="shelfBooksLeftMid"></g>
+          <g id="shelfBooksLeftBot"></g>
+          <g id="shelfBooksRightTop"></g>
+          <g id="shelfBooksRightMid"></g>
+          <g id="shelfBooksRightBot"></g>
+          <!-- نقشه‌ی تاخورده، تکیه‌داده به کتاب‌های قفسه‌ی پایین -->
+          <g transform="translate(146,46)">
+            <rect x="0" y="0" width="16" height="15" rx="1.4" fill="#ecdfba" stroke="#6b4226" stroke-width="1"/>
+            <path d="M3,2 L7,13 M7,2 L3,13 M11,1.5 L11,13.5" stroke="#a9754c" stroke-width=".7" fill="none" opacity=".85"/>
+            <path d="M0,5 Q8,2 16,5" stroke="#8f5f36" stroke-width=".6" fill="none" opacity=".6"/>
+            <path d="M1.5,15 L1.5,17.5 M14.5,15 L14.5,17.5" stroke="#b0503f" stroke-width="1.3"/>
+          </g>
+          <!-- چراغ مطالعه؛ نخش رو که می‌کشی (کلیک/لمس) روشن‌خاموش می‌شه و مودِ برنامه عوض می‌شه -->
+          <g id="lampGroup" class="lamp-off">
+            <line x1="192" y1="2" x2="192" y2="-14" stroke="#2a1810" stroke-width="2"/>
+            <path d="M181,-14 L203,-14 L197,-25 L187,-25 Z" fill="#c79a5b" stroke="#2a1810" stroke-width="1"/>
+            <ellipse class="lamp-glow" cx="192" cy="-10" rx="14" ry="10" fill="#ffe8a3"/>
+            <circle class="lamp-bulb" cx="192" cy="-11" r="2.6"/>
+            <g class="lamp-pull" onclick="toggleLamp()">
+              <rect x="186" y="-16" width="12" height="22" fill="transparent"/>
+              <g class="lamp-pull-rod">
+                <line x1="192" y1="-9" x2="192" y2="5" stroke="#8a6a3a" stroke-width="1.1"/>
+                <circle cx="192" cy="7" r="2.4" fill="#c79a5b" stroke="#2a1810" stroke-width=".8"/>
+              </g>
+            </g>
+          </g>
+
+          <g>
+            <circle cx="110" cy="46" r="27" fill="url(#windowSkyDay)" stroke="#caa15a" stroke-width="3.5"/>
+            <circle class="window-sky-night" cx="110" cy="46" r="27" fill="url(#windowSkyNight)"/>
+            <circle cx="110" cy="46" r="27" fill="url(#windowGlow)"/>
+            <circle class="roof-sun" cx="123" cy="34" r="5.5" fill="#ffd977"/>
+            <g class="roof-stars" fill="#fff6d8">
+              <circle class="twinkle d1" cx="98" cy="33" r="1.3"/>
+              <circle class="twinkle d2" cx="121" cy="29" r="1.1"/>
+              <circle class="twinkle d3" cx="126" cy="46" r="1.4"/>
+              <circle class="twinkle d4" cx="95" cy="53" r="1"/>
+              <circle class="twinkle d5" cx="112" cy="58" r="1.2"/>
+              <circle class="twinkle d1" cx="103" cy="44" r=".8"/>
+            </g>
+          </g>
+
+          <g class="roof-owl" transform="translate(110,70)">
+            <ellipse cx="0" cy="2" rx="17" ry="4" fill="#000" opacity=".18"/>
+            <ellipse cx="-8" cy="-9" rx="5.5" ry="7" fill="#9c6b3e" transform="rotate(-18 -8 -9)"/>
+            <ellipse cx="8" cy="-9" rx="5.5" ry="7" fill="#9c6b3e" transform="rotate(18 8 -9)"/>
+            <ellipse cx="0" cy="-10" rx="15" ry="14" fill="#c08a4e"/>
+            <path d="M -8,-24 -5,-16 -11,-17 Z" fill="#9c6b3e"/>
+            <path d="M 8,-24 11,-17 5,-16 Z" fill="#9c6b3e"/>
+            <ellipse cx="0" cy="-6" rx="7" ry="8" fill="#f1e2c4"/>
+            <circle cx="-6.5" cy="-13" r="6" fill="#fff"/>
+            <circle cx="6.5" cy="-13" r="6" fill="#fff"/>
+            <circle class="owl-pupil" cx="-6.5" cy="-13" r="2.6" fill="#2a1b10"/>
+            <circle class="owl-pupil" cx="6.5" cy="-13" r="2.6" fill="#2a1b10"/>
+            <circle cx="-7.8" cy="-14.8" r="1" fill="#fff" opacity=".85"/>
+            <circle cx="5.2" cy="-14.8" r="1" fill="#fff" opacity=".85"/>
+            <g class="owl-glasses" fill="none" stroke="#2a1b10" stroke-width="1.7" stroke-linecap="round">
+              <circle cx="-6.5" cy="-13" r="8"/>
+              <circle cx="6.5" cy="-13" r="8"/>
+              <line x1="1.5" y1="-13" x2="-1.5" y2="-13"/>
+              <line x1="-14.5" y1="-14" x2="-17" y2="-12"/>
+              <line x1="14.5" y1="-14" x2="17" y2="-12"/>
+            </g>
+            <path d="M -2,-6 L 2,-6 L 0,-3 Z" fill="#e0932f"/>
+          </g>
+        </g>
+      </svg>
+    </div>
+    <div class="clock-widget">
+      <div class="clock-digital" id="clockTime" dir="ltr">--:--:--</div>
+      <div class="clock-date" id="clockDate">—</div>
+    </div>
+    <div class="u-top-row">
+      <h1>فاز ۱۱ پردیس</h1>
+      <button class="nav-burger" onclick="toggleNavMenu()">☰</button>
+      <div class="nav-menu hidden" id="navMenu">
+        <button id="navSaved" onclick="selectNavTab('saved')">ذخیره‌ها</button>
+        <button id="navEvents" onclick="selectNavTab('events')">رویدادها</button>
+        <button id="navMap" onclick="selectNavTab('map')">نقشه</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="explorePanel">
+    <div class="u-search"><input id="searchInput" placeholder="جستجو: بلوک، طبقه، جهت، قیمت، شماره تماس…" oninput="onSearchInput(this.value)"></div>
+    <div class="u-filters" id="filters">
+      <div class="chip on" data-zone="">همه</div>
+      <div class="chip" data-zone="1">زون ۱</div><div class="chip" data-zone="2">زون ۲</div>
+      <div class="chip" data-zone="3">زون ۳</div><div class="chip" data-zone="4">زون ۴</div>
+      <div class="chip" data-zone="5">زون ۵</div>
+    </div>
+    <div class="u-pricerange">
+      <input type="text" id="priceMinInput" placeholder="حداقل قیمت" inputmode="numeric" oninput="onPriceRangeInput()">
+      <span>تا</span>
+      <input type="text" id="priceMaxInput" placeholder="حداکثر قیمت" inputmode="numeric" oninput="onPriceRangeInput()">
+    </div>
+    <div class="u-sort" id="sortFilters">
+      <div class="chip on" data-sort="block">بر اساس بلوک</div>
+      <div class="chip" data-sort="price">بر اساس قیمت</div>
+      <div class="chip" data-sort="time">بر اساس زمان</div>
+    </div>
+    <div class="u-list" id="uList"><div class="empty">در حال بارگذاری…</div></div>
+  </div>
+
+  <div id="manualPanel" class="hidden">
+    <div id="manualZoneGrid" class="manual-grid"></div>
+    <div id="manualBlockWrap" class="hidden">
+      <button class="mini-back" onclick="manualBack()">‹ بازگشت</button>
+      <div class="manual-grid small" id="manualBlockGrid"></div>
+    </div>
+    <div id="manualResultsWrap" class="hidden">
+      <button class="mini-back" onclick="manualBack()">‹ بازگشت</button>
+      <div class="u-list" id="manualList"></div>
+    </div>
+  </div>
+
+  <div id="buyersPanel" class="hidden">
+    <div class="u-list" id="buyersList"><div class="empty">در حال بارگذاری…</div></div>
+  </div>
+
+  <div id="ghadirPanel" class="hidden">
+    <!-- کوهسار و غدیر دو پروژه‌ی کاملاً جدا از همن (نه زیرمجموعه‌ی هم)؛ برای همین یه دکمه‌ی
+         جدا برای هرکدوم، دقیقاً مثلِ فیلترهای زون توی اکسپلور — هر لحظه فقط یکی‌شون فعاله. -->
+    <div class="u-filters" id="ghadirAreaFilters">
+      <div class="chip on" data-area="kuhsar">کوهسار</div>
+      <div class="chip" data-area="ghadir">غدیر</div>
+    </div>
+    <div class="u-search"><input id="ghadirSearchInput" placeholder="جستجو: بلوک، طبقه، جهت، قیمت، شماره تماس…" oninput="onGhadirSearchInput(this.value)"></div>
+    <div class="u-pricerange">
+      <input type="text" id="ghadirPriceMinInput" placeholder="حداقل قیمت" inputmode="numeric" oninput="onGhadirPriceRangeInput()">
+      <span>تا</span>
+      <input type="text" id="ghadirPriceMaxInput" placeholder="حداکثر قیمت" inputmode="numeric" oninput="onGhadirPriceRangeInput()">
+    </div>
+    <div class="u-sort" id="ghadirSortFilters">
+      <div class="chip on" data-sort="block">بر اساس بلوک</div>
+      <div class="chip" data-sort="price">بر اساس قیمت</div>
+      <div class="chip" data-sort="time">بر اساس زمان</div>
+    </div>
+    <div class="u-list" id="ghadirList"><div class="empty">در حال بارگذاری…</div></div>
+  </div>
+
+  <div id="savedPanel" class="hidden">
+    <div class="u-list" id="savedList"><div class="empty">چیزی ذخیره نکردی.</div></div>
+  </div>
+
+  <div id="eventsPanel" class="hidden">
+    <div class="ev-tabs" id="evTabs">
+      <button class="ev-tab on" data-ev="contacts" onclick="selectEvSubTab('contacts')"><span class="ev-tab-ic">👤</span>مخاطبین<span class="ev-tab-badge hidden" id="evBadgeContacts">0</span></button>
+      <button class="ev-tab" data-ev="deals" onclick="selectEvSubTab('deals')"><span class="ev-tab-ic">🤝</span>معاملات<span class="ev-tab-badge hidden" id="evBadgeDeals">0</span></button>
+      <button class="ev-tab" data-ev="log" onclick="selectEvSubTab('log')"><span class="ev-tab-ic">🗒️</span>رویدادها<span class="ev-tab-badge hidden" id="evBadgeLog">0</span></button>
+      <button class="ev-tab" data-ev="alarms" onclick="selectEvSubTab('alarms')"><span class="ev-tab-ic">⏰</span>یادآوری<span class="ev-tab-badge hidden" id="evBadgeAlarms">0</span></button>
+      <button class="ev-tab" data-ev="combo" onclick="selectEvSubTab('combo')"><span class="ev-tab-ic">🧩</span>ثبت ترکیبی</button>
+      <button class="ev-tab" data-ev="notifs" onclick="selectEvSubTab('notifs')"><span class="ev-tab-ic">🔔</span>اعلانات فعال<span class="ev-tab-badge hidden" id="evBadgeNotifs">0</span></button>
+      <button class="ev-tab" data-ev="notebook" onclick="selectEvSubTab('notebook')"><span class="ev-tab-ic">📓</span>یادداشت</button>
+    </div>
+
+    <div class="ev-pane hidden" id="evPane-notebook">
+      <div class="ev-card">
+        <div class="ev-card-head"><span class="ev-card-ic">📓</span><div><h3>یادداشت آزاد</h3><p class="hint">یه متنِ کلی که هر وقت خواستی بازنویسی‌ش می‌کنی.</p></div></div>
+        <textarea id="eventsText" placeholder="یادداشت یا رویدادهات رو اینجا بنویس…"></textarea>
+        <button class="btn-brass" onclick="saveEvents()">ذخیره</button>
+      </div>
+    </div>
+
+    <div class="ev-pane hidden" id="evPane-log">
+      <div class="ev-card">
+        <div class="ev-card-head"><span class="ev-card-ic">🗒️</span><div><h3>رویدادها</h3><p class="hint">هر رویداد رو جدا ثبت کن؛ هر وقت خواستی می‌تونی ویرایش یا حذفش کنی.</p></div></div>
+        <div class="rel-row">
+          <select id="logContactSelect"></select>
+          <select id="logDealSelect"></select>
+        </div>
+        <div class="inline-form">
+          <textarea id="eventNoteInput" placeholder="متن رویداد…"></textarea>
+          <button class="btn-brass" onclick="addEventNote()">افزودن رویداد</button>
+        </div>
+        <div id="eventNoteList"></div>
+      </div>
+    </div>
+
+    <div class="ev-pane hidden" id="evPane-deals">
+      <div class="ev-card">
+        <div class="ev-card-head"><span class="ev-card-ic">🤝</span><div><h3>ثبت معامله</h3><p class="hint">همه‌ی موارد دلبخواهیه — هر کدوم رو که نخواستی همینطور خالی بگذار.</p></div></div>
+        <div class="deal-form" id="dealForm">
+          <div class="deal-field">
+            <label>مرتبط با مخاطب (اختیاری)</label>
+            <div class="rel-row"><select id="dealContactSelect"></select></div>
+          </div>
+          <div class="deal-field">
+            <label><span class="deal-step">۱</span>نوع معامله</label>
+            <div class="radio-row">
+              <label><input type="radio" name="dealType" id="dealTypeRent" value="rent" onchange="renderDealFormVisibility()"> رهن و اجاره</label>
+              <label><input type="radio" name="dealType" id="dealTypeSale" value="sale" onchange="renderDealFormVisibility()"> خرید و فروش</label>
+            </div>
+          </div>
+
+          <div class="deal-field">
+            <label><span class="deal-step">۲</span>مالک یا همکار</label>
+            <div class="radio-row">
+              <label><input type="radio" name="dealRole" id="dealRoleOwner" value="owner"> مالک</label>
+              <label><input type="radio" name="dealRole" id="dealRoleColleague" value="colleague"> همکار</label>
+            </div>
+          </div>
+
+          <div class="deal-field">
+            <label><span class="deal-step">۳</span>به غیر از خودت، چند نفر دیگه تو این معامله دست دارن؟</label>
+            <input type="number" id="dealOthersCountInput" min="0" placeholder="عدد">
+          </div>
+
+          <div class="deal-field hidden" id="dealSaleWrap">
+            <label><span class="deal-step">۴</span>قیمت خرید و فروش (تومان)</label>
+            <input type="text" inputmode="numeric" id="dealSalePriceInput" placeholder="مثلاً 25,000,000" oninput="formatPriceInput(this)">
+          </div>
+
+          <div class="deal-field hidden" id="dealRentWrap">
+            <label><span class="deal-step">۵</span>رهن کامل یا رهن و اجاره؟</label>
+            <div class="radio-row">
+              <label><input type="radio" name="mortgageType" id="dealMortgageFull" value="full" onchange="renderDealFormVisibility()"> رهن کامل</label>
+              <label><input type="radio" name="mortgageType" id="dealMortgageRent" value="rent" onchange="renderDealFormVisibility()"> رهن و اجاره</label>
+            </div>
+            <input type="text" inputmode="numeric" id="dealMortgageAmountInput" placeholder="مبلغ رهن (تومان)" oninput="formatPriceInput(this)" style="margin-top:8px;">
+            <input type="text" inputmode="numeric" id="dealRentAmountInput" class="hidden" placeholder="مبلغ اجاره (تومان)" oninput="formatPriceInput(this)" style="margin-top:8px;">
+          </div>
+
+          <div class="deal-field">
+            <label><span class="deal-step">۶</span>بیانیه دارد؟</label>
+            <div class="radio-row">
+              <label><input type="radio" name="dealStatement" id="dealStatementYes" value="yes" onchange="renderDealFormVisibility()"> بله</label>
+              <label><input type="radio" name="dealStatement" id="dealStatementNo" value="no" onchange="renderDealFormVisibility()"> خیر</label>
+            </div>
+            <input type="text" inputmode="numeric" id="dealStatementPriceInput" class="hidden" placeholder="مبلغ بیانیه (تومان)" oninput="formatPriceInput(this)" style="margin-top:8px;">
+          </div>
+
+          <div style="display:flex; gap:8px;">
+            <button id="dealSubmitBtn" class="btn-brass" onclick="addDeal()">افزودن معامله</button>
+            <button id="dealCancelBtn" class="mini hidden" onclick="cancelEditDeal()">انصراف از ویرایش</button>
+          </div>
+        </div>
+        <div id="dealList"></div>
+      </div>
+    </div>
+
+    <div class="ev-pane hidden" id="evPane-contacts">
+      <div class="ev-card">
+        <div class="ev-card-head"><span class="ev-card-ic">👤</span><div><h3>مخاطبین</h3><p class="hint">مشخصات مخاطب رو ثبت کن؛ می‌تونی براش یادآوری هم بذاری.</p></div></div>
+        <div class="inline-form">
+          <input type="text" id="contactNameInput" placeholder="نام و نام خانوادگی">
+          <input type="text" id="contactPhoneInput" placeholder="شماره تماس">
+          <input type="text" id="contactSocialInput" placeholder="آیدی">
+          <textarea id="contactNotesInput" placeholder="مشخصات و یادداشت…"></textarea>
+          <button class="btn-brass" onclick="addContact()">افزودن مخاطب</button>
+        </div>
+        <div id="contactList"></div>
+      </div>
+    </div>
+
+    <div class="ev-pane hidden" id="evPane-alarms">
+      <div class="ev-card">
+        <div class="ev-card-head"><span class="ev-card-ic">⏰</span><div><h3>یادآوری (آلارم)</h3><p class="hint">زمانشو خودت دستی انتخاب کن. تا وقتی این صفحه روی گوشی یا کامپیوترت باز باشه (حتی توی یه تب دیگه)، سر همون ساعت با صدا و نوتیف یادت می‌ندازه.</p></div></div>
+        <div class="rel-row">
+          <select id="alarmContactSelect"></select>
+          <select id="alarmDealSelect"></select>
+        </div>
+        <div class="alarm-form">
+          <button type="button" class="btn-brass btn-ghost jalali-trigger" id="alarmDateTrigger" onclick="openJalaliPicker('alarm')">📅 انتخاب تاریخ و ساعت</button>
+          <input type="text" id="alarmLabelInput" placeholder="یادداشت (اختیاری)">
+          <button class="btn-brass" onclick="addAlarm()">تنظیم آلارم</button>
+        </div>
+        <div id="alarmList"></div>
+      </div>
+    </div>
+
+    <div class="ev-pane hidden" id="evPane-combo">
+      <div class="ev-card">
+        <div class="ev-card-head"><span class="ev-card-ic">🧩</span><div><h3>ثبت ترکیبی</h3><p class="hint">همه‌چیز رو با هم، تو یه فرم: مخاطب، رویداد، معامله و یادآوری — هرکدوم رو پر کنی ذخیره می‌شه و خودکار به هم وصل می‌مونن؛ هرکدوم رو خالی بذاری همون نادیده گرفته می‌شه.</p></div></div>
+
+        <div class="combo-sep"><span>👤</span> مخاطب</div>
+        <div class="rel-row"><select id="comboContactSelect"></select></div>
+        <div class="inline-form">
+          <input type="text" id="comboNewContactName" placeholder="یا یه مخاطبِ تازه: نام">
+          <input type="text" id="comboNewContactPhone" placeholder="شماره تماس">
+        </div>
+
+        <div class="combo-sep"><span>🗒️</span> رویداد</div>
+        <div class="inline-form">
+          <textarea id="comboNoteInput" placeholder="متن رویداد (اختیاری)…"></textarea>
+        </div>
+
+        <div class="combo-sep"><span>🤝</span> معامله</div>
+        <div class="radio-row" style="margin-bottom:8px;">
+          <label><input type="radio" name="comboDealType" id="comboDealTypeSale"> خرید و فروش</label>
+          <label><input type="radio" name="comboDealType" id="comboDealTypeRent"> رهن و اجاره</label>
+        </div>
+        <div class="inline-form">
+          <input type="text" inputmode="numeric" id="comboDealPriceInput" placeholder="مبلغ (تومان) — اختیاری" oninput="formatPriceInput(this)">
+        </div>
+
+        <div class="combo-sep"><span>⏰</span> یادآوری</div>
+        <div class="alarm-form">
+          <button type="button" class="btn-brass btn-ghost jalali-trigger" id="comboDateTrigger" onclick="openJalaliPicker('combo')">📅 انتخاب تاریخ و ساعت (اختیاری)</button>
+          <input type="text" id="comboAlarmLabelInput" placeholder="یادداشتِ یادآوری (اختیاری)">
+        </div>
+
+        <button class="btn-brass" style="margin-top:16px;" onclick="addComboEntry()">ذخیره‌ی ترکیبی</button>
+      </div>
+    </div>
+
+    <div class="ev-pane hidden" id="evPane-notifs">
+      <div class="ev-card">
+        <div class="ev-card-head"><span class="ev-card-ic">🔔</span><div><h3>اعلانات فعال</h3><p class="hint">هر وقت مخاطب، معامله، رویداد یا یادآوری‌ای ذخیره بشه، یه خلاصه‌اش این‌جا هم میاد.</p></div></div>
+        <div id="notifList"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ نقشه: مدیر می‌تونه چند مدل نقشه آپلود کنه (از پنلِ مدیریت)، کاربر بینِ
+       مدل‌ها جابه‌جا می‌شه و با زوم/جابه‌جایی (مثلِ نقشه‌های گوگل‌مپ) نقشه‌خوانی می‌کنه. ============ -->
+  <div id="mapPanel" class="hidden">
+    <div class="u-filters hidden" id="mapTypeChips"></div>
+    <div id="mapEmpty" class="empty">هنوز نقشه‌ای توسط مدیر ثبت نشده.</div>
+    <div class="map-viewer hidden" id="mapViewerWrap">
+      <div class="map-viewport" id="mapViewport">
+        <img id="mapImage" alt="نقشه" draggable="false">
+      </div>
+      <div class="map-controls">
+        <button type="button" onclick="mapZoomBy(1.4)" title="بزرگ‌نمایی">+</button>
+        <button type="button" onclick="mapZoomBy(1/1.4)" title="کوچک‌نمایی">−</button>
+        <button type="button" onclick="mapResetView()" title="بازگشت به حالتِ اول">⤾</button>
+        <button type="button" onclick="mapToggleFullscreen()" title="تمام‌صفحه">⛶</button>
+      </div>
+      <div class="map-hint">برای جابه‌جایی بکش، برای زوم چرخِ ماوس یا پینچِ دوانگشتی رو استفاده کن؛ دابل‌تپ هم زوم می‌کنه.</div>
+    </div>
+  </div>
+
+  <!-- ============ نوارِ پایینِ صفحه: منوی اصلیِ برنامه ============ -->
+  <nav class="bottom-nav" id="bottomNav">
+    <button class="bn-item on" id="bnExplore" onclick="selectNavTab('explore')"><span class="bn-ic">🧭</span><span class="bn-label">اکسپلور</span></button>
+    <button class="bn-item" id="bnManual" onclick="selectNavTab('manual')"><span class="bn-ic">🗂️</span><span class="bn-label">انتخاب دستی</span></button>
+    <button class="bn-item" id="bnGhadir" onclick="selectNavTab('ghadir')"><span class="bn-ic">⛰️</span><span class="bn-label">کوهسار و غدیر</span></button>
+    <button class="bn-item" id="bnBuyers" onclick="selectNavTab('buyers')"><span class="bn-ic">🙋</span><span class="bn-label">خواهان</span></button>
+  </nav>
+</div>
+
+<!-- ============ انتخابگر تاریخ و ساعت شمسی (برای آلارم) ============ -->
+<div id="jalaliPickerModal" class="hidden">
+  <div class="jp-box">
+    <div class="jp-head"><span>انتخاب تاریخ و ساعت</span><button onclick="closeJalaliPicker()">✕</button></div>
+    <div class="jp-body">
+      <div class="jp-nav">
+        <button onclick="jpShiftMonth(1)">‹</button>
+        <b id="jpMonthLabel">—</b>
+        <button onclick="jpShiftMonth(-1)">›</button>
+      </div>
+      <div class="jp-weekdays">
+        <span>ش</span><span>ی</span><span>د</span><span>س</span><span>چ</span><span>پ</span><span>ج</span>
+      </div>
+      <div class="jp-days" id="jpDays"></div>
+      <div class="jp-time">
+        <select id="jpHour"></select><span>:</span><select id="jpMinute"></select>
+      </div>
+      <button class="btn-brass jp-confirm" onclick="confirmJalaliPicker()">تأیید</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ زنگِ آلارم: تا خودِ کاربر قطعش نکنه، بسته نمی‌شه ============ -->
+<div id="alarmRingModal" class="hidden">
+  <div class="ring-box">
+    <div class="ring-ic">⏰</div>
+    <div class="ring-title">یادآوری پردیس</div>
+    <div class="ring-label" id="ringLabel"></div>
+    <div class="ring-time" id="ringTime"></div>
+    <button class="btn-brass ring-stop" onclick="stopRingingAlarm()">قطع آلارم</button>
+    <div class="ring-queue-note hidden" id="ringQueueNote"></div>
+  </div>
+</div>
+
+<!-- ============ ADMIN (desktop, editors only) ============ -->
+<div id="adminView">
+  <div class="a-shell">
+    <aside class="a-side">
+      <div class="brand">پردیس<small>پنل مدیریت</small></div>
+    </aside>
+    <main class="a-main">
+      <div class="a-topbar"><h2>فایل‌های فعال</h2><span class="a-user-pill" id="adminPill">ادمین</span></div>
+      <p class="hint" style="margin:-14px 0 20px;">فایل‌هایی که بیش از ۹ روز از ثبتشون گذشته، به‌طور خودکار و همیشگی حذف می‌شن (نه آرشیو).</p>
+      <div class="a-stats">
+        <div class="a-stat"><b id="statActive">۰</b><span>فایل فعال</span></div>
+        <div class="a-stat"><b id="statArchived">۰</b><span>آرشیوشده</span></div>
+        <div class="a-stat"><b id="statToday">۰</b><span>ثبت‌شده امروز</span></div>
+        <div class="a-stat"><b id="statAvg">—</b><span>میانگین قیمت</span></div>
+      </div>
+      <div class="a-panels">
+        <div>
+          <table>
+            <thead><tr><th>زون/بلوک</th><th>قیمت</th><th>وضعیت</th><th>ثبت</th><th></th></tr></thead>
+            <tbody id="tbody"><tr><td colspan="5">در حال بارگذاری…</td></tr></tbody>
+          </table>
+          <div class="table-pager" id="tablePager"></div>
+        </div>
+        <div>
+          <div class="a-form" style="margin-bottom:16px;">
+            <h3>ورود آگهی شلوغ</h3>
+            <label>متن آگهی(ها) را تایپ کن یا همین‌جا پیست کن</label>
+            <textarea id="pasteBox" placeholder="زون 1&#10;بلوک 23&#10;طبقه 5 شمالی&#10;قیمت 5298&#10;09120000000&#10;&#10;می‌تونی چند آگهی رو پشت‌سرهم بچسبونی؛ برنامه خودش جداشون می‌کنه…"></textarea>
+            <p class="hint">هیچ فرمت خاصی لازم نیست — برنامه زون/بلوک/طبقه/جهت/قیمت/تلفن رو خودش استخراج می‌کنه و قبل از ذخیره برای تأیید نشونت می‌ده.</p>
+            <label>عکسِ فایل (اختیاری)</label>
+            <input type="file" id="pastePhotoFile" accept="image/*">
+            <label>ویدیوی فایل (اختیاری)</label>
+            <input type="file" id="pasteVideoFile" accept="video/*">
+            <p class="hint">اگه عکس یا ویدیو انتخاب کنی، روی همه‌ی آگهی‌هایی که از همین متن استخراج می‌شن می‌شینه.</p>
+            <button onclick="processPaste()">پردازش متن</button>
+            <div id="pasteResults"></div>
+          </div>
+          <div class="a-form">
+            <h3>افزودن دستی</h3>
+            <div class="row2"><div><label>زون</label><input id="fZone" placeholder="۱ تا ۵"></div><div><label>بلوک</label><input id="fBlock" placeholder="۱ تا ۲۰۰"></div></div>
+            <div class="row2"><label style="grid-column:1/-1;">قیمت (میلیون تومان)</label></div>
+            <input id="fPrice" placeholder="۵۲۹۸">
+            <label>شماره تماس</label><input id="fPhone" placeholder="۰۹۱۲…">
+            <label>عکسِ فایل (اختیاری)</label>
+            <input type="file" id="fPhotoFile" accept="image/*">
+            <label>ویدیوی فایل (اختیاری)</label>
+            <input type="file" id="fVideoFile" accept="video/*">
+            <button onclick="quickAdd()">ثبت فایل</button>
+          </div>
+          <div class="a-form" style="margin-top:16px;">
+            <h3>مدیریتِ نقشه‌ها</h3>
+            <p class="hint">می‌تونی چند مدل نقشه آپلود کنی (مثلاً نقشه‌ی کلی، نقشه‌ی هر زون، نقشه‌ی کوهسار/غدیر)؛ کاربر از پنلِ «نقشه» بینِ همه‌شون جابه‌جا می‌شه.</p>
+            <label>تصویرِ نقشه</label>
+            <input type="file" id="mapUploadFile" accept="image/*">
+            <label>اسمِ این نقشه</label>
+            <input type="text" id="mapUploadName" placeholder="مثلاً «نقشه‌ی کلیِ فاز ۱۱»">
+            <button onclick="uploadMapImage()">آپلودِ نقشه</button>
+            <p class="hint" id="mapUploadStatus"></p>
+            <div id="mapAdminList" style="margin-top:10px;"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="a-form" style="margin-top:18px;">
+        <h3>تکراری‌ها</h3>
+        <p class="hint">فایل‌هایی که بیش از یک بار آپلود شده‌اند. انتخابشون رو بزن و با یه دکمه بفرستشون آرشیو.</p>
+        <div style="display:flex; gap:8px; align-items:center; margin:10px 0;">
+          <button class="mini" onclick="toggleDupSelectMode()" id="dupSelectBtn">انتخاب</button>
+          <button class="mini" onclick="toggleDupSelectAll()" id="dupSelectAllBtn" style="display:none;">انتخاب همه</button>
+          <button class="mini" onclick="archiveDupSelected()" id="dupArchiveBtn" style="display:none; background:#b0503f; color:#fff; border-color:#b0503f;">انتقال به آرشیو (<span id="dupSelCount">0</span>)</button>
+        </div>
+        <div id="dupList"></div>
+      </div>
+
+      <div class="a-form" style="margin-top:18px;">
+        <h3>آرشیو</h3>
+        <p class="hint">فایل‌های آرشیوشده. برای خلوت‌شدن دیتابیس، می‌تونی انتخاب کنی و برای همیشه حذفشون کنی.</p>
+        <div style="display:flex; gap:8px; align-items:center; margin:10px 0;">
+          <button class="mini" onclick="toggleArchiveSelectAll()" id="archiveSelectAllBtn">انتخاب همه</button>
+          <button class="mini" onclick="deleteArchiveSelected()" id="archiveDeleteBtn" style="display:none; background:#b0503f; color:#fff; border-color:#b0503f;">حذف همیشگی (<span id="archiveSelCount">0</span>)</button>
+        </div>
+        <div id="archiveList"></div>
+      </div>
+    </main>
+  </div>
+</div>
+
+<!-- ============ جزئیات کامل یک فایل (متن اصلیِ آپلودشده) ============ -->
+<div id="detailModal" class="hidden">
+  <div class="detail-box">
+    <div class="detail-head"><span>جزئیات فایل</span><button onclick="closeDetail()">✕</button></div>
+    <div id="detailBody"></div>
+  </div>
+</div>
+
+<!-- مودالِ ورودِ مدیر: ورودِ واقعی با ایمیل/رمز به Firebase Auth (رمز هیچ‌جا در کدِ صفحه نیست) -->
+<div id="adminLoginModal" class="hidden">
+  <form class="a-form" onsubmit="submitAdminLogin(event)">
+    <button type="button" class="al-close" onclick="closeAdminLogin()">✕ بستن</button>
+    <h3>ورود مدیر</h3>
+    <label for="adminLoginEmail">ایمیل</label>
+    <input type="email" id="adminLoginEmail" autocomplete="username" dir="ltr" value="valakisgod@gmail.com">
+    <label for="adminLoginPassword">رمز عبور</label>
+    <input type="password" id="adminLoginPassword" autocomplete="current-password" dir="ltr" placeholder="••••••••">
+    <div id="adminLoginError" role="alert"></div>
+    <button type="submit" class="btn-brass" id="adminLoginSubmit">ورود</button>
+  </form>
+</div>
+
+<script>
+// =======================================================================
+// لایه‌ی بک‌اند (جایگزینِ claude.use('db'/'user'/'assets')): این صفحه کاملاً مستقل از Claude
+// کار می‌کنه و از Firebase (پروژه‌ی pardis-b) استفاده می‌کنه. بقیه‌ی برنامه فقط با سه آبجکتِ
+// «db»، «user» و «assets» (به‌علاوه‌ی «auth» برای فرمِ ورود) کار داره و نمی‌دونه پشتش چیه:
+//   window.__backend = { db, user, assets, auth }
+//   window.__backendReady : Promise ای که با همین آبجکت resolve می‌شه (یا null اگه اتصال نشد)
+// برای تست: تست‌ها قبل از اجرای اسکریپت‌ها window.__backend (یا __backendReady) رو پر می‌کنن
+// و اسکریپتِ ماژولِ Firebase (پایینِ صفحه) در این حالت هیچ initی انجام نمی‌ده.
+// window.__createFirebaseBackend(sdk) سازنده‌ی نسخه‌ی واقعیه؛ sdk = توابعِ خامِ Firebase.
+// =======================================================================
+(function(){
+  if (!window.__backendReady){
+    window.__backendReady = window.__backend
+      ? Promise.resolve(window.__backend)
+      : new Promise(resolve => { window.__resolveBackend = resolve; });
+  }
+})();
+
+const FIREBASE_CONFIG = {
+  apiKey: "AIzaSyBd6MELjPRHqUTPuXwrLIGJWr4n1i2btHk",
+  authDomain: "pardis-b.firebaseapp.com",
+  projectId: "pardis-b",
+  storageBucket: "pardis-b.firebasestorage.app",
+  messagingSenderId: "943540130003",
+  appId: "1:943540130003:web:89c23d6e54797d66cc0426"
+};
+const ADMIN_EMAIL = 'valakisgod@gmail.com';
+
+window.__createFirebaseBackend = async function(sdk){
+  const app = sdk.initializeApp(FIREBASE_CONFIG);
+  const auth = sdk.getAuth(app);
+  // ignoreUndefinedProperties: Firestore برخلافِ دیتابیسِ قبلی روی فیلدِ undefined خطا می‌ده
+  const firestore = sdk.initializeFirestore
+    ? sdk.initializeFirestore(app, { ignoreUndefinedProperties: true })
+    : sdk.getFirestore(app);
+  const storage = sdk.getStorage(app);
+
+  // ---------------- Firestore: همون شکلِ db.doc(path) / db.collection(path) ----------------
+  // snapshotِ سند: exists یک property (نه تابع) است، مثلِ دیتابیسِ قبلی.
+  function wrapDocSnap(snap){
+    return { id: snap.id, exists: typeof snap.exists === 'function' ? snap.exists() : !!snap.exists, data: () => snap.data() };
+  }
+  function docRefApi(path){
+    const ref = sdk.doc(firestore, path);
+    return {
+      id: path.split('/').pop(),
+      path,
+      get: async () => wrapDocSnap(await sdk.getDoc(ref)),
+      set: (data, opts) => opts ? sdk.setDoc(ref, data, opts) : sdk.setDoc(ref, data),
+      update: (data) => sdk.updateDoc(ref, data),
+      delete: () => sdk.deleteDoc(ref),
+      onSnapshot: (onNext, onError) => sdk.onSnapshot(ref, snap => onNext(wrapDocSnap(snap)), onError),
+    };
+  }
+  function wrapQuerySnap(snap){
+    const docs = snap.docs.map(wrapDocSnap);
+    return { docs, size: docs.length, empty: docs.length === 0, forEach: (fn) => docs.forEach(fn), docChanges: () => (snap.docChanges ? snap.docChanges() : []) };
+  }
+  // هر orderBy/where/limit یک آبجکتِ جدید برمی‌گردونه (immutable) تا کوئری‌ها قاطی نشن.
+  function collectionApi(path, constraints){
+    constraints = constraints || [];
+    const colRef = sdk.collection(firestore, path);
+    const build = () => constraints.length ? sdk.query(colRef, ...constraints.map(c => c())) : colRef;
+    const next = (c) => collectionApi(path, constraints.concat([c]));
+    return {
+      path,
+      doc: (id) => docRefApi(path + '/' + id),
+      add: async (data) => { const ref = await sdk.addDoc(colRef, data); return docRefApi(path + '/' + ref.id); },
+      get: async () => wrapQuerySnap(await sdk.getDocs(build())),
+      orderBy: (field, dir) => next(() => sdk.orderBy(field, dir || 'asc')),
+      where: (field, op, val) => next(() => sdk.where(field, op, val)),
+      limit: (n) => next(() => sdk.limit(n)),
+      onSnapshot: (onNext, onError) => sdk.onSnapshot(build(), snap => onNext(wrapQuerySnap(snap)), onError),
+    };
+  }
+  const db = { doc: docRefApi, collection: (p) => collectionApi(p) };
+
+  // ---------------- Auth ----------------
+  const user = {
+    canEdit: async () => !!(auth.currentUser && auth.currentUser.email === ADMIN_EMAIL),
+    id: async () => auth.currentUser ? auth.currentUser.uid : null,
+  };
+  const authApi = {
+    signInAdmin: (email, password) => sdk.signInWithEmailAndPassword(auth, email, password),
+    // خروج یعنی برگشت به کاربرِ ناشناس (تا نوشتنِ «رویدادها» که فقط به login نیاز داره کار کنه)
+    signOut: async () => { await sdk.signOut(auth); try { await sdk.signInAnonymously(auth); } catch (e) { console.error('ورودِ ناشناس ناموفق بود:', e); } },
+    onChange: (cb) => sdk.onAuthStateChanged(auth, cb),
+  };
+
+  // ---------------- Storage: assets.upload / delete / list ----------------
+  // id = مسیرِ کاملِ فایل در Storage (مثلِ «uploads/xxxx-name.png»)؛ برای حذف همین کافیه.
+  const UPLOAD_PREFIX = 'uploads/';
+  const assets = {
+    upload: async (file) => {
+      const rand = Math.random().toString(36).slice(2, 10) + Date.now().toString(36);
+      const safeName = String((file && file.name) || 'file').replace(/[^A-Za-z0-9._-]+/g, '_').slice(-80);
+      const id = UPLOAD_PREFIX + rand + '-' + safeName;
+      const sref = sdk.storageRef(storage, id);
+      const meta = file && file.type ? { contentType: file.type } : undefined;
+      await sdk.uploadBytes(sref, file, meta);
+      const url = await sdk.getDownloadURL(sref);
+      return { id, url, sizeBytes: (file && file.size) || 0, contentType: (file && file.type) || '' };
+    },
+    delete: async (id) => { await sdk.deleteObject(sdk.storageRef(storage, id)); },
+    list: async () => {
+      const res = await sdk.listAll(sdk.storageRef(storage, UPLOAD_PREFIX));
+      const items = await Promise.all(res.items.map(async it => ({ id: it.fullPath, url: await sdk.getDownloadURL(it) })));
+      return { assets: items, usage: { used: items.length, limit: Infinity } };
+    },
+  };
+
+  // ---------------- ورودِ ناشناسِ خودکار ----------------
+  // اول باید منتظرِ بازیابیِ نشستِ قبلی (مثلاً ادمینِ لاگین‌شده) بمونیم؛ وگرنه signInAnonymously
+  // نشستِ ادمین رو با یک کاربرِ ناشناس عوض می‌کنه.
+  await new Promise(resolve => { sdk.onAuthStateChanged(auth, () => resolve()); setTimeout(resolve, 10000); });
+  if (!auth.currentUser){
+    try { await sdk.signInAnonymously(auth); }
+    catch (e) { console.error('ورودِ ناشناس ناموفق بود (Anonymous باید در Firebase Auth فعال باشه):', e); }
+  }
+
+  return { db, user, assets, auth: authApi };
+};
+</script>
+<script type="module">
+// SDKِ ماژولارِ Firebase از jsdelivr (gstatic جزو CDNهای مجاز نیست). اگه window.__backend از قبل
+// (مثلاً توسطِ تست) تعریف شده باشه، هیچ importی انجام نمی‌شه.
+if (!window.__backend && window.__resolveBackend){
+  try {
+    const V = '10.13.0', B = 'https://cdn.jsdelivr.net/npm/firebase@' + V + '/';
+    const [appM, authM, fsM, stM] = await Promise.all([
+      import(B + 'app/+esm'), import(B + 'auth/+esm'), import(B + 'firestore/+esm'), import(B + 'storage/+esm'),
+    ]);
+    const sdk = {
+      initializeApp: appM.initializeApp,
+      getAuth: authM.getAuth, signInAnonymously: authM.signInAnonymously,
+      signInWithEmailAndPassword: authM.signInWithEmailAndPassword, signOut: authM.signOut,
+      onAuthStateChanged: authM.onAuthStateChanged,
+      getFirestore: fsM.getFirestore, initializeFirestore: fsM.initializeFirestore,
+      doc: fsM.doc, getDoc: fsM.getDoc, setDoc: fsM.setDoc, updateDoc: fsM.updateDoc, deleteDoc: fsM.deleteDoc,
+      onSnapshot: fsM.onSnapshot, collection: fsM.collection, addDoc: fsM.addDoc, getDocs: fsM.getDocs,
+      query: fsM.query, where: fsM.where, orderBy: fsM.orderBy, limit: fsM.limit,
+      getStorage: stM.getStorage, storageRef: stM.ref, uploadBytes: stM.uploadBytes,
+      getDownloadURL: stM.getDownloadURL, deleteObject: stM.deleteObject, listAll: stM.listAll,
+    };
+    window.__backend = await window.__createFirebaseBackend(sdk);
+    window.__resolveBackend(window.__backend);
+  } catch (e) {
+    console.error('راه‌اندازیِ Firebase ناموفق بود:', e);
+    window.__resolveBackend(null);
+  }
+}
+</script>
+
+<script>
+// ---------------------------------------------------------------------
+// کتابخانه‌ی بالای صفحه: کتاب‌های هر قفسه به‌جای صدها <rect> دستی، همین‌جا
+// با یه تابع ساده ساخته می‌شن — هم کدش کوتاه‌تره هم ردیف‌ها یکدست می‌مونن.
+// ---------------------------------------------------------------------
+const BOOK_COLORS = ['#8b3a3a','#3a6b5c','#c79a5b','#4a5a8b','#6b4226','#b0503f','#5c7a3a','#9c6b3e'];
+function buildShelfRow(groupId, x0, width, topY, bottomY, count){
+  const g = document.getElementById(groupId);
+  if (!g) return;
+  const gap = 1.3;
+  const bookW = (width - gap * (count - 1)) / count;
+  const maxH = bottomY - topY;
+  let x = x0, html = '';
+  for (let i = 0; i < count; i++){
+    const h = maxH - ((i * 37 + groupId.length * 7) % 6);
+    const color = BOOK_COLORS[(i + groupId.length) % BOOK_COLORS.length];
+    if (i % 5 === 4){
+      // هر چند کتاب یکی رو کج تکیه می‌دیم، مثل قفسه‌ی واقعی
+      const cx = x + bookW / 2;
+      html += `<g transform="translate(${cx.toFixed(1)},${bottomY}) rotate(-9)"><rect x="${(-bookW/2).toFixed(1)}" y="${(-h).toFixed(1)}" width="${bookW.toFixed(1)}" height="${h.toFixed(1)}" rx=".6" fill="${color}" stroke="#2a1810" stroke-width=".5"/></g>`;
+    } else {
+      html += `<rect x="${x.toFixed(1)}" y="${(bottomY-h).toFixed(1)}" width="${bookW.toFixed(1)}" height="${h.toFixed(1)}" rx=".6" fill="${color}" stroke="#2a1810" stroke-width=".5"/>`;
+    }
+    x += bookW + gap;
+  }
+  g.innerHTML = html;
+}
+function buildBookshelf(){
+  buildShelfRow('shelfBooksLeftTop', 7, 68, 4, 21, 6);
+  buildShelfRow('shelfBooksLeftMid', 7, 68, 26, 42, 6);
+  buildShelfRow('shelfBooksLeftBot', 7, 55, 46, 61, 5);
+  buildShelfRow('shelfBooksRightTop', 145, 68, 4, 21, 6);
+  buildShelfRow('shelfBooksRightMid', 145, 68, 26, 42, 6);
+  buildShelfRow('shelfBooksRightBot', 164, 49, 46, 61, 4);
+}
+buildBookshelf();
+
+// ---------------------------------------------------------------------
+// چراغ مطالعه: کشیدن نخش (کلیک/لمس) هم خودِ چراغ رو روشن/خاموش می‌کنه هم
+// کل برنامه رو بینِ مودِ روشن و تاریک جابه‌جا می‌کنه — و چون آسمونِ پشتِ
+// پنجره هم با همین data-theme کنترل می‌شه (بالا، در CSS)، خودکار از صبح
+// به شب (یا برعکس) عوض می‌شه.
+// ---------------------------------------------------------------------
+let lampOn = !(window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches);
+function applyLampVisual(){
+  const lampGroup = document.getElementById('lampGroup');
+  if (lampGroup) lampGroup.classList.toggle('lamp-on', lampOn);
+}
+function toggleLamp(){
+  lampOn = !lampOn;
+  document.documentElement.setAttribute('data-theme', lampOn ? 'light' : 'dark');
+  applyLampVisual();
+  const lampGroup = document.getElementById('lampGroup');
+  if (lampGroup){
+    lampGroup.classList.add('pulling');
+    setTimeout(() => lampGroup.classList.remove('pulling'), 150);
+  }
+}
+document.documentElement.setAttribute('data-theme', lampOn ? 'light' : 'dark');
+applyLampVisual();
+
+let db = null, canEdit = false, allListings = [], ownListings = [], baleListings = [], allBuyers = [], zoneFilter = '', searchQuery = '', sortMode = 'block';
+let priceMin = null, priceMax = null;
+// وضعیت‌هایی که ادمین می‌تونه برای هر فایل انتخاب کنه؛ '' یعنی بدونِ وضعیت (همون رفتارِ سابق).
+const STATUS_OPTIONS = ['', 'رزرو شد', 'در حال مذاکره', 'فروخته شد'];
+
+// ورودِ مدیر: دیگه رمزِ ثابتِ سمتِ مرورگر نداریم؛ مدیر با ایمیل/رمزِ واقعیِ Firebase Auth وارد می‌شه
+// (فرمِ #adminLoginModal) و canEdit فقط وقتی true است که ایمیلِ کاربرِ واردشده ادمین باشه. نوشتن در
+// دیتابیس هم طبق قوانینِ Firestore (firestore.rules) فقط برای همین ایمیل مجازه، پس این فقط یک UI-gate نیست.
+let backend = null, authKey = null, authInitDone = false;
+let savedIdsLoaded = false, unsubSaved = null;
+
+// پاک‌سازیِ خودکار: فایل‌هایی (فعال یا آرشیوشده) که از ثبتشون بیش از ۹ روز گذشته، به‌طور
+// همیشگی حذف می‌شوند — نه آرشیو. این فقط از سمتِ حساب مالک/ادیتور واقعی اجرا می‌شود (طبق
+// قوانین نوشتن دیتابیس).
+const AUTO_DELETE_DAYS = 9;
+
+// باگ قبلی: کاتاف با «Date.now() - 9*24h» حساب می‌شد؛ یعنی یک پیام هر روز درست سرِ همون
+// ساعتِ دقیقِ ثبتش پاک می‌شد (مثلاً پیامی که ساعت ۳ بعدازظهر ثبت شده بود، ۹ روز بعد هم
+// ساعت ۳ بعدازظهر پاک می‌شد) نه «سرِ ساعت ۱۲ شب». اینجا به‌جاش کاتاف را روی نیمه‌شبِ
+// به‌وقتِ تهران حساب می‌کنیم؛ پیام‌ها همگی یک‌جا، سرِ ساعت ۱۲ شبِ روزِ نهم پاک می‌شوند.
+// ایران از DST استفاده نمی‌کند؛ آفست تهران همیشه ۳:۳۰+ است، پس نیمه‌شبِ تهران = UTC منهای ۳:۳۰
+const TEHRAN_OFFSET_MS = (3 * 60 + 30) * 60 * 1000;
+
+function tehranMidnightTimestamp(daysAgo){
+  const fmt = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Tehran', year: 'numeric', month: '2-digit', day: '2-digit' });
+  const parts = fmt.formatToParts(new Date());
+  const y = +parts.find(p => p.type === 'year').value;
+  const m = +parts.find(p => p.type === 'month').value;
+  const d = +parts.find(p => p.type === 'day').value;
+  const todayMidnightUTC = Date.UTC(y, m - 1, d, 0, 0, 0) - TEHRAN_OFFSET_MS;
+  return todayMidnightUTC - daysAgo * 24 * 60 * 60 * 1000;
+}
+
+// ---------------------------------------------------------------------
+// تقویم شمسی: به‌جای پیاده‌سازیِ دستیِ فرمولِ نجومیِ کبیسه (که به‌راحتی می‌شه توش اشتباه کرد)،
+// از همون موتورِ تقویمِ فارسیِ خودِ مرورگر (Intl با calendar=persian) به‌عنوان منبعِ حقیقت استفاده
+// می‌کنیم — دقیقاً همون چیزی که formatAlarmTime برای نمایش استفاده می‌کنه، پس نمایش و انتخابگر
+// همیشه با هم یکی می‌مونن. برای تبدیلِ برعکس (شمسی به میلادی) چون Intl مستقیم این کار رو نمی‌کنه،
+// یه حدسِ اولیه می‌زنیم و با همون موتور تنظیمش می‌کنیم تا دقیقاً به روزِ درست برسیم.
+const PERSIAN_MONTHS = ['فروردین','اردیبهشت','خرداد','تیر','مرداد','شهریور','مهر','آبان','آذر','دی','بهمن','اسفند'];
+const persianDayFmt = new Intl.DateTimeFormat('en-US-u-ca-persian', { year:'numeric', month:'numeric', day:'numeric', timeZone:'Asia/Tehran' });
+
+function gregorianToJalaliParts(date){
+  const parts = persianDayFmt.formatToParts(date);
+  const get = t => +parts.find(p => p.type === t).value;
+  return { jy: get('year'), jm: get('month'), jd: get('day') };
+}
+
+// یه تاریخِ Date برمی‌گردونه که «روزِ گرگوریِ» داخلش (به‌وقتِ UTC) دقیقاً همون روزیه که به‌وقتِ
+// تهران معادلِ jy/jm/jd شمسی است؛ لنگرِ محاسبه رویِ ظهرِ UTC است تا هیچ‌وقت از مرزِ روز لب‌پر نزنه.
+function findGregorianForJalali(jy, jm, jd){
+  let g = new Date(Date.UTC(jy + 621, 2, 21, 12, 0, 0));
+  const approxOffsetDays = (jm - 1) * 30 + (jd - 1) - 10;
+  g = new Date(g.getTime() + approxOffsetDays * 86400000);
+  for (let i = 0; i < 20; i++){
+    const got = gregorianToJalaliParts(g);
+    if (got.jy === jy && got.jm === jm && got.jd === jd) return g;
+    let diff = (got.jy - jy) * 365 + (got.jm - jm) * 30 + (got.jd - jd);
+    if (diff === 0) diff = got.jd > jd ? 1 : -1;
+    g = new Date(g.getTime() - diff * 86400000);
+  }
+  return g;
+}
+
+function jalaliYearLength(jy){
+  const start = findGregorianForJalali(jy, 1, 1);
+  const end = findGregorianForJalali(jy + 1, 1, 1);
+  return Math.round((end - start) / 86400000);
+}
+function jalaliMonthLength(jy, jm){
+  if (jm <= 6) return 31;
+  if (jm <= 11) return 30;
+  return jalaliYearLength(jy) === 366 ? 30 : 29;
+}
+
+// jy/jm/jd/hh/mm شمسی (به‌وقتِ تهران) را به یک timestamp مطلق تبدیل می‌کند
+function jalaliToTimestamp(jy, jm, jd, hh, mm){
+  const g = findGregorianForJalali(jy, jm, jd);
+  const tehranMidnightUTC = Date.UTC(g.getUTCFullYear(), g.getUTCMonth(), g.getUTCDate(), 0, 0, 0) - TEHRAN_OFFSET_MS;
+  return tehranMidnightUTC + hh * 3600000 + mm * 60000;
+}
+
+let autoCleanupRunning = false;
+// قانون جدید: فایلی که کاربر در «ذخیره‌ها» نگه داشته، نباید پاک یا آرشیو بشه — نه با پاک‌سازیِ
+// خودکار، نه با حذف/آرشیوِ دستی — مگر اینکه خودش از ذخیره‌ها درش بیاره؛ اون موقع دوباره طبق
+// قاعده‌ی عادی (اگه تاریخش گذشته) فوراً پاک می‌شه (نگاه کن به toggleSaveListing).
+async function runAutoCleanup(){
+  if (!db || !canEdit || autoCleanupRunning) return;
+  const cutoff = tehranMidnightTimestamp(AUTO_DELETE_DAYS);
+  const stale = allListings.filter(l => l.createdAt && new Date(l.createdAt).getTime() < cutoff && !savedListingIds.has(l.id));
+  if (!stale.length) return;
+  autoCleanupRunning = true;
+  try {
+    await Promise.all(stale.map(l => db.doc('listings/' + l.id).delete().catch(() => {})));
+  } finally {
+    autoCleanupRunning = false;
+  }
+}
+
+// اگه فایل گذشته از حدِ ۹ روز باشه و ذخیره نباشه، فوراً حذفش می‌کنه — برای صدا زدن بلافاصله بعد
+// از این‌که کاربر یه فایل رو از ذخیره‌ها درآورد (دیگه لازم نیست منتظر تیکِ بعدیِ runAutoCleanup بمونه).
+async function deleteIfPastCutoffNow(id){
+  if (!db || !canEdit) return;
+  const l = allListings.find(x => x.id === id);
+  if (!l || !l.createdAt || savedListingIds.has(id)) return;
+  const cutoff = tehranMidnightTimestamp(AUTO_DELETE_DAYS);
+  if (new Date(l.createdAt).getTime() < cutoff){
+    db.doc('listings/' + id).delete().catch(() => {});
+  }
+}
+
+function enterAdminMode(){
+  if (!canEdit){ openAdminLogin(); return; }
+  setMode('admin');
+}
+
+function openAdminLogin(){
+  document.getElementById('adminLoginError').textContent = '';
+  document.getElementById('adminLoginPassword').value = '';
+  document.getElementById('adminLoginModal').classList.remove('hidden');
+  const pw = document.getElementById('adminLoginPassword');
+  if (pw && pw.focus) pw.focus();
+}
+function closeAdminLogin(){
+  document.getElementById('adminLoginModal').classList.add('hidden');
+}
+async function submitAdminLogin(ev){
+  if (ev && ev.preventDefault) ev.preventDefault();
+  const errEl = document.getElementById('adminLoginError');
+  const email = (document.getElementById('adminLoginEmail').value || '').trim();
+  const password = document.getElementById('adminLoginPassword').value || '';
+  errEl.textContent = '';
+  if (!email || !password){ errEl.textContent = 'ایمیل و رمز عبور را وارد کن.'; return; }
+  if (!backend || !backend.auth){ errEl.textContent = 'اتصال به سیستمِ ورود برقرار نیست.'; return; }
+  const btn = document.getElementById('adminLoginSubmit');
+  btn.disabled = true;
+  try {
+    await backend.auth.signInAdmin(email, password);
+    await refreshAuth();
+    if (!canEdit){
+      // حسابِ دیگری (نه ادمین) وارد شد: بیرونش می‌کنیم تا به کاربرِ ناشناس برگرده
+      try { await backend.auth.signOut(); } catch (e) {}
+      await refreshAuth();
+      errEl.textContent = 'این حساب مجازِ ورود به بخش مدیریت نیست.';
+      return;
+    }
+    closeAdminLogin();
+    setMode('admin');
+  } catch (e) {
+    const code = (e && e.code) || '';
+    errEl.textContent = (code === 'auth/network-request-failed') ? 'اتصال به اینترنت/سرور برقرار نشد.'
+      : (code === 'auth/too-many-requests') ? 'تلاشِ بیش‌ازحد؛ چند دقیقه بعد دوباره امتحان کن.'
+      : 'ورود ناموفق بود — ایمیل یا رمز اشتباه است.';
+  } finally {
+    btn.disabled = false;
+  }
+}
+async function adminLogout(){
+  try { if (backend && backend.auth) await backend.auth.signOut(); } catch (e) {}
+  await refreshAuth();
+  setMode('user');
+}
+
+// وضعیتِ ورود (canEdit/userId/assets) رو از backend می‌خونه و UIِ وابسته رو به‌روز می‌کنه.
+// هم در init صدا زده می‌شه هم هر بار که Auth تغییر کنه (ورود/خروجِ مدیر).
+async function refreshAuth(){
+  const user = backend ? backend.user : null;
+  canEdit = user ? !!(await user.canEdit()) : false;
+  userId = user ? await user.id() : null;
+  // assets فقط برای ادمین در دسترسه؛ بقیه فقط نقشه‌های موجود رو می‌بینن و نیازی بهش ندارن.
+  assetsApi = canEdit && backend ? (backend.assets || null) : null;
+  const key = (canEdit ? '1' : '0') + '|' + userId;
+  const changed = key !== authKey;
+  authKey = key;
+  document.getElementById('whoBadge').textContent = canEdit ? 'شما ادمین این صفحه‌اید' : 'نمای مشاهده';
+  document.getElementById('btnAdmin').classList.toggle('hidden', !canEdit);
+  document.getElementById('btnAdminLogout').classList.toggle('hidden', !canEdit);
+  // اگه backend قابلیتِ ورود نداره (مثلاً نسخه‌ی تست)، دکمه‌ی ورود هم نشون داده نمی‌شه
+  document.getElementById('btnAdminLogin').classList.toggle('hidden', canEdit || !(backend && backend.auth));
+  if (!canEdit && document.body.classList.contains('show-admin')) setMode('user');
+  if (!canEdit && changed){
+    // بعد از خروج، ردیف‌های جدولِ مدیریت (با دکمه‌های ویرایش/حذف) نباید در DOM بمونن
+    const tb = document.getElementById('tbody');
+    if (tb) tb.innerHTML = '<tr><td colspan="5">—</td></tr>';
+  }
+  if (changed && authInitDone){
+    attachSavedListener();
+    render(); renderBuyers(); renderMapAdminList();
+  }
+  return changed;
+}
+
+// اشتراکِ سندِ «ذخیره‌ها» به uid وصله؛ چون uid با ورود/خروجِ مدیر عوض می‌شه، باید هر بار از نو وصل بشه.
+function attachSavedListener(){
+  if (unsubSaved){ try { unsubSaved(); } catch (e) {} unsubSaved = null; }
+  savedListingIds = new Set(); savedBuyerIds = new Set();
+  if (!db || !userId){ savedIdsLoaded = true; return; } // بدون کاربر چیزی برای محافظت نیست
+  savedIdsLoaded = false;
+  unsubSaved = db.doc('data/users/' + userId + '/saved').onSnapshot(
+    doc => {
+      const data = doc.exists ? doc.data() : null;
+      savedListingIds = new Set((data && data.listingIds) || []);
+      savedBuyerIds = new Set((data && data.buyerIds) || []);
+      savedIdsLoaded = true;
+      render();
+      renderBuyers();
+      runAutoCleanup();
+    },
+    err => { savedIdsLoaded = true; }
+  );
+}
+
+function onSearchInput(value){
+  searchQuery = normalizeNumbers(value || '').trim();
+  render();
+}
+
+// جستجوی آزاد: شماره بلوک، زون، طبقه، جهت (فارسی)، قیمت یا شماره تماس را می‌پذیرد
+function matchesSearch(l){
+  if (!searchQuery) return true;
+  const haystack = [l.zone, l.block, floorLabel(l.floor) || '', l.direction || '', l.phone || '', l.priceText || '', l.price || '']
+    .join(' ');
+  return haystack.includes(searchQuery);
+}
+
+// فیلترِ بازه‌ی قیمتی: هر کدوم از حداقل/حداکثر که خالی باشه نادیده گرفته می‌شه.
+// فایلی که اصلاً قیمتش ثبت نشده (price=null)، وقتی حداقل یا حداکثری انتخاب شده، فیلتر می‌شه بیرون
+// (چون نمی‌شه مطمئن بود توی بازه هست یا نه).
+function onPriceRangeInput(){
+  const minVal = normalizeNumbers(document.getElementById('priceMinInput').value || '').trim();
+  const maxVal = normalizeNumbers(document.getElementById('priceMaxInput').value || '').trim();
+  priceMin = minVal ? parseInt(minVal) : null;
+  priceMax = maxVal ? parseInt(maxVal) : null;
+  render();
+}
+function inPriceRange(l){
+  if (priceMin == null && priceMax == null) return true;
+  if (l.price == null) return false;
+  if (priceMin != null && l.price < priceMin) return false;
+  if (priceMax != null && l.price > priceMax) return false;
+  return true;
+}
+
+function onGhadirPriceRangeInput(){
+  const minVal = normalizeNumbers(document.getElementById('ghadirPriceMinInput').value || '').trim();
+  const maxVal = normalizeNumbers(document.getElementById('ghadirPriceMaxInput').value || '').trim();
+  ghadirPriceMin = minVal ? parseInt(minVal) : null;
+  ghadirPriceMax = maxVal ? parseInt(maxVal) : null;
+  renderGhadir();
+}
+function inGhadirPriceRange(l){
+  if (ghadirPriceMin == null && ghadirPriceMax == null) return true;
+  if (l.price == null) return false;
+  if (ghadirPriceMin != null && l.price < ghadirPriceMin) return false;
+  if (ghadirPriceMax != null && l.price > ghadirPriceMax) return false;
+  return true;
+}
+let userTab = 'explore', manualZone = null, manualBlock = null;
+let ghadirSearchQuery = '', ghadirSortMode = 'block', ghadirAreaFilter = 'kuhsar';
+let ghadirPriceMin = null, ghadirPriceMax = null;
+
+// ---------------------------------------------------------------------
+// «ذخیره‌ها»: ذخیره‌ی شخصیِ هر بازدیدکننده (مثل سیو کردن پست در اینستاگرام).
+// شناسه‌ها در data/users/<uid>/saved نگه داشته می‌شوند — این مسیر طبق قرارداد
+// پلتفرم به‌صورت پیش‌فرض فقط برای همون کاربر خصوصیه، پس به قانونِ db جدیدی نیاز ندارد.
+// «رویدادها»: یک یادداشتِ آزاد و مشترک، روی سند events/main (قانون جدید لازم دارد).
+// ---------------------------------------------------------------------
+let savedListingIds = new Set(), savedBuyerIds = new Set(), userId = null;
+let eventsText = '';
+// یادآوری‌ها (آلارم): روی سند events/alarms نگه داشته می‌شود — همون قانونِ events موجود کافیه.
+// محدودیت مهم: این یک صفحه‌ی وب است، نه اپ گوشی؛ تا وقتی این صفحه روی مرورگر باز باشه (حتی تب پس‌زمینه)
+// سر وقت با صدا/نوتیف یادآوری می‌کنه، ولی اگه مرورگر کاملاً بسته باشه نمی‌تونه پیام بفرسته.
+let alarms = [];
+let alarmContactId = null;
+// رویدادها (لیست مجزا، قابل ویرایش/حذف) و مخاطبین — هر دو روی مسیر events نگه داشته می‌شوند
+let eventNotes = [], editingEventNoteId = null;
+let contacts = [], editingContactId = null;
+let deals = [], editingDealId = null;
+
+// ---------------------------------------------------------------------
+// «نقشه»: مدیر از پنلِ مدیریت چند مدل نقشه (assetِ عکس) آپلود می‌کنه؛ کاربر از بینِ همون
+// مدل‌ها یکی رو انتخاب می‌کنه و با زوم/جابه‌جایی (مثلِ یه نقشه‌ی آنلاینِ معمولی) می‌بینتش.
+// عکس‌ها از طریقِ assets ذخیره می‌شن (نه db مستقیم)، و فقط شناسه‌شون روی سندِ maps/<id> می‌شینه.
+// ---------------------------------------------------------------------
+let assetsApi = null;
+let maps = [], selectedMapId = null;
+let mapView = { scale: 1, x: 0, y: 0 };
+const MAP_MIN_SCALE = 1, MAP_MAX_SCALE = 6;
+
+function toggleNavMenu(){
+  document.getElementById('navMenu').classList.toggle('hidden');
+}
+document.addEventListener('click', e => {
+  const menu = document.getElementById('navMenu');
+  if (!menu || menu.classList.contains('hidden')) return;
+  if (e.target.closest('.nav-menu') || e.target.closest('.nav-burger')) return;
+  menu.classList.add('hidden');
+});
+
+function selectNavTab(tab){
+  setUserTab(tab);
+  document.getElementById('navMenu').classList.add('hidden');
+}
+
+function setUserTab(tab){
+  userTab = tab;
+  // دکمه‌های نوارِ پایین (اکسپلور/انتخاب دستی/کوهسار و غدیر/خواهان)
+  document.getElementById('bnExplore').classList.toggle('on', tab==='explore');
+  document.getElementById('bnManual').classList.toggle('on', tab==='manual');
+  document.getElementById('bnGhadir').classList.toggle('on', tab==='ghadir');
+  document.getElementById('bnBuyers').classList.toggle('on', tab==='buyers');
+  // دکمه‌های منوی همبرگریِ بالا (ذخیره‌ها، رویدادها، نقشه)
+  document.getElementById('navSaved').classList.toggle('on', tab==='saved');
+  document.getElementById('navEvents').classList.toggle('on', tab==='events');
+  document.getElementById('navMap').classList.toggle('on', tab==='map');
+  document.getElementById('explorePanel').classList.toggle('hidden', tab!=='explore');
+  document.getElementById('manualPanel').classList.toggle('hidden', tab!=='manual');
+  document.getElementById('buyersPanel').classList.toggle('hidden', tab!=='buyers');
+  document.getElementById('ghadirPanel').classList.toggle('hidden', tab!=='ghadir');
+  document.getElementById('savedPanel').classList.toggle('hidden', tab!=='saved');
+  document.getElementById('eventsPanel').classList.toggle('hidden', tab!=='events');
+  document.getElementById('mapPanel').classList.toggle('hidden', tab!=='map');
+  if (tab === 'manual'){ manualZone = null; manualBlock = null; renderManual(); }
+  if (tab === 'buyers'){ renderBuyers(); }
+  if (tab === 'ghadir'){ renderGhadir(); }
+  if (tab === 'saved'){ renderSaved(); }
+  if (tab === 'map'){ renderMapPanel(); }
+  if (tab === 'events'){
+    document.getElementById('eventsText').value = eventsText;
+    selectEvSubTab(evSubTab);
+    renderAlarms(); renderEventNotes(); renderContacts(); renderDeals(); renderNotifications();
+  }
+}
+
+// زیرتب‌های «رویدادها»: یادداشت/رویدادها/معاملات/مخاطبین/یادآوری — فقط یکی هر بار دیده می‌شه
+let evSubTab = 'contacts';
+function selectEvSubTab(tab){
+  evSubTab = tab;
+  document.querySelectorAll('.ev-tab').forEach(b => b.classList.toggle('on', b.dataset.ev === tab));
+  document.querySelectorAll('.ev-pane').forEach(p => p.classList.toggle('hidden', p.id !== 'evPane-' + tab));
+}
+
+function toggleSaveListing(id){
+  const wasSaved = savedListingIds.has(id);
+  if (wasSaved) savedListingIds.delete(id); else savedListingIds.add(id);
+  persistSaved();
+  render();
+  // طبق قانون جدید: تا وقتی ذخیره بود دست نمی‌خورد؛ همین که از ذخیره‌ها درش آوردیم، اگه از قبل
+  // تاریخش گذشته (بیش از ۹ روز)، دیگه نباید منتظر چرخه‌ی بعدی پاک‌سازی بمونه — همین حالا پاک می‌شه.
+  if (wasSaved) deleteIfPastCutoffNow(id);
+}
+function toggleSaveBuyer(id){
+  if (savedBuyerIds.has(id)) savedBuyerIds.delete(id); else savedBuyerIds.add(id);
+  persistSaved();
+  renderBuyers();
+  renderSaved();
+}
+function persistSaved(){
+  if (!db || !userId) return;
+  db.doc('data/users/' + userId + '/saved').set({
+    listingIds: [...savedListingIds],
+    buyerIds: [...savedBuyerIds]
+  }).catch(() => {});
+}
+function renderSaved(){
+  const list = document.getElementById('savedList');
+  if (!list) return;
+  const savedListings = allListings.filter(l => savedListingIds.has(l.id) && !l.archived);
+  const savedBuyers = allBuyers.filter(b => savedBuyerIds.has(b.id));
+  const html = savedListings.map(listingCardHtml).join('') + savedBuyers.map(buyerCardHtml).join('');
+  list.innerHTML = html || '<div class="empty">چیزی ذخیره نکردی.</div>';
+}
+
+function saveEvents(){
+  if (!db) return;
+  const text = document.getElementById('eventsText').value;
+  db.doc('events/main').set({ text, updatedAt: new Date().toISOString() })
+    .catch(() => alert('ذخیره نشد — این حساب اجازه‌ی ویرایش این صفحه را ندارد.'));
+}
+
+// ---------------------------------------------------------------------
+// یادآوری (آلارم): زمانش کاملاً دستی و توسط خود کاربر انتخاب می‌شود.
+// هر تیک ساعت (هر ثانیه، همون تابعی که ساعت بالای صفحه رو به‌روز می‌کنه) چک می‌شود که
+// آیا زمان رسیده؛ اگر رسیده بود هم صدا پخش می‌شود هم (در صورت اجازه) نوتیف مرورگر نشون داده می‌شود.
+// ---------------------------------------------------------------------
+// رفع باگ: صدای آلارم با AudioContext پخش می‌شد، اما چون لحظه‌ی رسیدن زمان (تایمر) بدون
+// هیچ کلیک کاربری صدا رو شروع می‌کرد، مرورگرها طبق سیاست «پخش خودکار» جلوی صدا رو می‌گرفتند
+// (AudioContext در حالت suspended گیر می‌کرد) و کاربر هیچ صدایی نمی‌شنید — انگار اصلاً
+// آلارمی زده نشده. راه‌حل: همون لحظه‌ای که کاربر دکمه‌ی «تنظیم آلارم» رو می‌زنه (یه کلیک
+// واقعی)، یک AudioContext مشترک باز می‌شود؛ وقتی بعداً زمانِ آلارم برسد، همین Context
+// (که از قبل باز است) برای پخش بوق استفاده می‌شود، نه یک Context تازه‌ی قفل‌شده.
+let alarmAudioCtx = null;
+function unlockAlarmAudio(){
+  try {
+    if (!alarmAudioCtx) alarmAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    if (alarmAudioCtx.state === 'suspended') alarmAudioCtx.resume();
+  } catch (e) {}
+}
+
+// ---------------------------------------------------------------------
+// انتخابگرِ تاریخ/ساعتِ شمسی: به‌جای <input type="datetime-local"> (که میلادیه و ظاهرش دستِ
+// خودِ مرورگره)، یه پنلِ خودمون با همون تمِ برنزیِ برنامه. مقدارِ نهایی در alarmPickerISO
+// (یک رشته‌ی ISO میلادی، دقیقاً مثلِ قبل) نگه داشته می‌شود تا بقیه‌ی منطقِ آلارم دست‌نخورده بمونه.
+let alarmPickerISO = null;
+let comboPickerISO = null; // همون انتخابگر، برای بخشِ یادآوریِ تبِ «ثبت ترکیبی»
+let jalaliPickerTarget = 'alarm'; // 'alarm' یا 'combo' — کدوم دکمه/متغیر باید نتیجه رو بگیره
+const JALALI_PICKER_TARGETS = {
+  alarm: { triggerId: 'alarmDateTrigger' },
+  combo: { triggerId: 'comboDateTrigger' },
+};
+let jp = { viewJy: 0, viewJm: 0, jy: 0, jm: 0, jd: 0 };
+
+function openJalaliPicker(target){
+  jalaliPickerTarget = target || 'alarm';
+  unlockAlarmAudio(); // همین کلیک، یه ژستِ کاربریِ واقعیه؛ صداگیریِ آلارم رو هم همین‌جا باز می‌کنیم
+  const currentISO = jalaliPickerTarget === 'combo' ? comboPickerISO : alarmPickerISO;
+  const base = currentISO ? new Date(currentISO) : new Date(Date.now() + 10 * 60000);
+  const parts = gregorianToJalaliParts(base);
+  const hh = new Intl.DateTimeFormat('en-GB', { timeZone:'Asia/Tehran', hour:'2-digit', hour12:false }).format(base);
+  const mm = new Intl.DateTimeFormat('en-GB', { timeZone:'Asia/Tehran', minute:'2-digit' }).format(base);
+  jp = { viewJy: parts.jy, viewJm: parts.jm, jy: parts.jy, jm: parts.jm, jd: parts.jd };
+
+  const hourSel = document.getElementById('jpHour');
+  const minSel = document.getElementById('jpMinute');
+  if (!hourSel.options.length){
+    for (let h = 0; h < 24; h++) hourSel.innerHTML += `<option value="${h}">${String(h).padStart(2,'0')}</option>`;
+    for (let m = 0; m < 60; m++) minSel.innerHTML += `<option value="${m}">${String(m).padStart(2,'0')}</option>`;
+  }
+  hourSel.value = String(+hh);
+  minSel.value = String(+mm);
+
+  jpRenderCalendar();
+  document.getElementById('jalaliPickerModal').classList.remove('hidden');
+}
+function closeJalaliPicker(){
+  document.getElementById('jalaliPickerModal').classList.add('hidden');
+}
+function jpShiftMonth(delta){
+  jp.viewJm += delta;
+  if (jp.viewJm < 1){ jp.viewJm = 12; jp.viewJy -= 1; }
+  if (jp.viewJm > 12){ jp.viewJm = 1; jp.viewJy += 1; }
+  jpRenderCalendar();
+}
+function jpSelectDay(d){
+  jp.jy = jp.viewJy; jp.jm = jp.viewJm; jp.jd = d;
+  jpRenderCalendar();
+}
+function jpRenderCalendar(){
+  document.getElementById('jpMonthLabel').textContent = PERSIAN_MONTHS[jp.viewJm - 1] + ' ' + jp.viewJy;
+  const firstOfMonth = findGregorianForJalali(jp.viewJy, jp.viewJm, 1);
+  const leadBlanks = (firstOfMonth.getUTCDay() + 1) % 7; // شنبه=۰ تا جمعه=۶
+  const len = jalaliMonthLength(jp.viewJy, jp.viewJm);
+  const today = gregorianToJalaliParts(new Date());
+  let html = '';
+  for (let i = 0; i < leadBlanks; i++) html += `<span class="jp-day jp-empty"></span>`;
+  for (let d = 1; d <= len; d++){
+    const isToday = today.jy === jp.viewJy && today.jm === jp.viewJm && today.jd === d;
+    const isSel = jp.jy === jp.viewJy && jp.jm === jp.viewJm && jp.jd === d;
+    html += `<button type="button" class="jp-day${isToday?' jp-today':''}${isSel?' jp-selected':''}" onclick="jpSelectDay(${d})">${d}</button>`;
+  }
+  document.getElementById('jpDays').innerHTML = html;
+}
+function confirmJalaliPicker(){
+  const hh = +document.getElementById('jpHour').value;
+  const mm = +document.getElementById('jpMinute').value;
+  const ts = jalaliToTimestamp(jp.jy, jp.jm, jp.jd, hh, mm);
+  const iso = new Date(ts).toISOString();
+  const trigger = document.getElementById(JALALI_PICKER_TARGETS[jalaliPickerTarget].triggerId);
+  if (jalaliPickerTarget === 'combo') comboPickerISO = iso; else alarmPickerISO = iso;
+  if (trigger) trigger.textContent = '📅 ' + formatAlarmTime(iso);
+  closeJalaliPicker();
+}
+
+function addAlarm(){
+  unlockAlarmAudio();
+  const labelInput = document.getElementById('alarmLabelInput');
+  if (!alarmPickerISO){ alert('اول یه زمان برای یادآوری انتخاب کن.'); return; }
+  const time = new Date(alarmPickerISO);
+  if (isNaN(time.getTime())){ alert('زمان انتخاب‌شده معتبر نیست.'); return; }
+  if (window.Notification && Notification.permission === 'default'){
+    try { Notification.requestPermission(); } catch (e) {}
+  }
+  // باگ قبلی: `alarms` مستقیماً همون آرایه‌ای بود که از doc.data().items می‌اومد — طبق قرارداد
+  // دیتابیسِ آرتیفکت، بدنه‌ی هر اسنپ‌شات «فریز» (غیرقابل‌تغییر) است؛ push روی یه آرایه‌ی فریزشده
+  // خطا می‌ده (TypeError، چه در حالت strict چه غیرِ آن) و کل تابع همون‌جا متوقف می‌شه — یعنی
+  // دکمه‌ی «تنظیم آلارم» از دومین بار به بعد (بعد از اولین دریافتِ داده از سرور) اصلاً کار نمی‌کرد.
+  // راه‌حل: به‌جای تغییر در جا، یک آرایه‌ی تازه (کپی) ساخته و جایگزین می‌شود.
+  const contactSel = document.getElementById('alarmContactSelect');
+  const dealSel = document.getElementById('alarmDealSelect');
+  const contactId = (contactSel && contactSel.value) || alarmContactId || null;
+  const dealId = (dealSel && dealSel.value) || null;
+  alarms = [...alarms, {
+    id: 'al' + Date.now() + Math.random().toString(36).slice(2, 6),
+    time: time.toISOString(),
+    label: labelInput.value.trim(),
+    firedAt: null,
+    contactId, dealId,
+  }];
+  addNotificationEntry('alarm', '⏰ یادآوری برای ' + formatAlarmTime(time.toISOString()) + (labelInput.value.trim() ? ' · ' + labelInput.value.trim() : '') + ' تنظیم شد.');
+  alarmContactId = null;
+  alarmPickerISO = null;
+  document.getElementById('alarmDateTrigger').textContent = '📅 انتخاب تاریخ و ساعت';
+  labelInput.value = '';
+  if (contactSel) contactSel.value = '';
+  if (dealSel) dealSel.value = '';
+  persistAlarms();
+  renderAlarms();
+  renderContacts();
+}
+
+function removeAlarm(id){
+  alarms = alarms.filter(a => a.id !== id);
+  persistAlarms();
+  renderAlarms();
+}
+
+function persistAlarms(){
+  if (!db) return;
+  db.doc('events/alarms').set({ items: alarms })
+    .catch(() => alert('ذخیره‌ی آلارم ناموفق بود — این حساب اجازه‌ی ویرایش این صفحه را ندارد.'));
+}
+
+function formatAlarmTime(iso){
+  return new Intl.DateTimeFormat('fa-IR-u-ca-persian', { timeZone:'Asia/Tehran', dateStyle:'medium', timeStyle:'short' }).format(new Date(iso));
+}
+
+function renderAlarms(){
+  const list = document.getElementById('alarmList');
+  if (!list) return;
+  const sorted = [...alarms].sort((a,b) => a.time.localeCompare(b.time));
+  list.innerHTML = sorted.length ? sorted.map(a => {
+    const chips = (a.contactId ? contactChip(a.contactId) : '') + (a.dealId ? dealChip(a.dealId) : '');
+    return `<div class="alarm-row${a.firedAt ? ' alarm-fired' : ''}">
+      <div class="alarm-row-top">
+        <div class="alarm-info"><span class="alarm-ic">${a.firedAt ? '✅' : '⏰'}</span><b>${esc(formatAlarmTime(a.time))}</b>${a.label ? ' · ' + esc(a.label) : ''}${a.firedAt ? ' <span class="alarm-done">(رسید)</span>' : ''}</div>
+        <button class="mini" onclick="removeAlarm('${esc(a.id)}')">حذف</button>
+      </div>
+      ${chips ? `<div class="rel-chips">${chips}</div>` : ''}
+    </div>`;
+  }).join('') : '<p class="hint">هنوز آلارمی تنظیم نشده.</p>';
+  const badge = document.getElementById('evBadgeAlarms');
+  if (badge){
+    const pending = alarms.filter(a => !a.firedAt).length;
+    badge.textContent = pending;
+    badge.classList.toggle('hidden', pending === 0);
+  }
+}
+
+// صدای آلارم: به‌جای یه بوقِ تکی و خشکِ مربعی (880Hz)، یه چیمِ نرمِ سه‌نتی شبیهِ زنگِ در —
+// آرپژِ یه آکوردِ ماژور (A5 → C#6 → E6) با پوششِ نرمِ حجم (fade-in سریع، fade-out نمایی) که
+// صدای تیز و ناگهانی تولید نمی‌کنه.
+function playAlarmBeep(){
+  try {
+    // از همون AudioContext بازشده (موقع کلیکِ «تنظیم آلارم») استفاده کن؛ اگه به هر دلیلی
+    // هنوز باز نشده، با یه Context تازه امتحان کن — ممکنه صدا پخش نشه (چون کلیک تازه‌ای
+    // نبوده) ولی حداقل خطا نمی‌ده.
+    const ctx = alarmAudioCtx || new (window.AudioContext || window.webkitAudioContext)();
+    if (ctx.state === 'suspended') ctx.resume();
+    const now = ctx.currentTime;
+    const notes = [
+      { freq: 880.00, start: 0,    dur: 0.55 }, // A5
+      { freq: 1108.73, start: 0.16, dur: 0.60 }, // C#6
+      { freq: 1318.51, start: 0.34, dur: 0.75 }, // E6
+    ];
+    notes.forEach(n => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'sine';
+      osc.frequency.value = n.freq;
+      const t0 = now + n.start;
+      gain.gain.setValueAtTime(0.0001, t0);
+      gain.gain.linearRampToValueAtTime(0.16, t0 + 0.04);
+      gain.gain.exponentialRampToValueAtTime(0.0001, t0 + n.dur);
+      osc.connect(gain); gain.connect(ctx.destination);
+      osc.start(t0);
+      osc.stop(t0 + n.dur + 0.05);
+    });
+  } catch (e) {}
+}
+
+// تا قبل از این، آلارم فقط یه‌بار بوق می‌زد و یه alert() (که خودش یه‌بارمصرفه و با Enter/Esc
+// هم بسته می‌شه) نشون می‌داد — یعنی اگه کاربر سرش گرم بود، به‌راحتی از دستش در می‌رفت.
+// حالا به‌جاش: یه پنلِ خودِ برنامه باز می‌شه که فقط با زدنِ دکمه‌ی «قطع آلارم» بسته می‌شه، و
+// تا همون لحظه هر چند ثانیه صدا رو دوباره پخش می‌کنه. اگه چند آلارم هم‌زمان برسن، توی صف
+// می‌مونن و یکی‌یکی (بعد از قطع‌کردنِ قبلی) نشون داده می‌شن.
+let ringingQueue = [];
+let alarmRingIntervalId = null;
+
+function fireAlarm(a){
+  try {
+    if (window.Notification && Notification.permission === 'granted'){
+      // requireInteraction نگه می‌داره تا خودِ کاربر ببندتش (نه این‌که بعد چند ثانیه خودش بره)،
+      // vibrate (اگه گوشی پشتیبانی کنه) حس‌ش رو واقعی‌تر می‌کنه، و کلیک روی نوتیف تبِ برنامه رو
+      // می‌آره جلو — ولی این‌ها فقط وقتی کار می‌کنن که خودِ تب/مرورگر هنوز باز باشه (حتی پس‌زمینه)؛
+      // اگه مرورگر کاملاً بسته باشه، هیچ صفحه‌ی وبی (این یکی هم همینطور) نمی‌تونه نوتیف بفرسته —
+      // این محدودیتِ خودِ مرورگرهاست، نه چیزی که با دسترسیِ بیشتر از گوشی حل بشه.
+      const notif = new Notification('⏰ یادآوری پردیس', {
+        body: a.label || 'زمان یادآوری رسید',
+        requireInteraction: true,
+        tag: 'pardis-alarm-' + a.id,
+        vibrate: [300, 100, 300],
+      });
+      notif.onclick = () => { try { window.focus(); } catch (e) {} };
+    }
+  } catch (e) {}
+  ringingQueue.push(a);
+  if (ringingQueue.length === 1) showNextRingingAlarm();
+  else updateRingQueueNote();
+}
+
+function showNextRingingAlarm(){
+  if (!ringingQueue.length) return;
+  const a = ringingQueue[0];
+  document.getElementById('ringLabel').textContent = a.label || 'بدون یادداشت';
+  document.getElementById('ringTime').textContent = formatAlarmTime(a.time);
+  document.getElementById('alarmRingModal').classList.remove('hidden');
+  updateRingQueueNote();
+  playAlarmBeep();
+  if (alarmRingIntervalId) clearInterval(alarmRingIntervalId);
+  alarmRingIntervalId = setInterval(playAlarmBeep, 2600);
+}
+
+function updateRingQueueNote(){
+  const note = document.getElementById('ringQueueNote');
+  if (!note) return;
+  const extra = ringingQueue.length - 1;
+  note.textContent = extra > 0 ? `${extra} یادآوریِ دیگه هم در صفِ نمایشه` : '';
+  note.classList.toggle('hidden', extra <= 0);
+}
+
+function stopRingingAlarm(){
+  if (alarmRingIntervalId){ clearInterval(alarmRingIntervalId); alarmRingIntervalId = null; }
+  ringingQueue.shift();
+  if (ringingQueue.length){
+    showNextRingingAlarm();
+  } else {
+    document.getElementById('alarmRingModal').classList.add('hidden');
+  }
+}
+
+function checkAlarms(){
+  if (!alarms.length) return;
+  const now = Date.now();
+  let changed = false;
+  // باگ قبلی: `a.firedAt = ...` مستقیماً روی آبجکتِ داخلِ آرایه‌ی فریزشده می‌نوشت. برخلاف push
+  // (که خطا می‌ده)، نوشتن روی یک فیلد ممکنه بی‌سروصدا هیچ اثری نداشته باشه — یعنی آلارم ظاهراً
+  // زده می‌شد (صدا/نوتیف) ولی firedAt هیچ‌وقت ذخیره نمی‌شد، پس سر تیکِ ثانیه‌ی بعد دوباره (و
+  // دوباره، هر ثانیه، تا ابد) زده می‌شد. راه‌حل: آرایه‌ی تازه با آبجکت‌های تازه.
+  const updated = alarms.map(a => {
+    if (!a.firedAt && new Date(a.time).getTime() <= now){
+      changed = true;
+      fireAlarm(a);
+      return { ...a, firedAt: new Date().toISOString() };
+    }
+    return a;
+  });
+  if (changed){ alarms = updated; persistAlarms(); if (userTab === 'events'){ renderAlarms(); renderContacts(); } }
+}
+
+// رفع باگ: وقتی این تب در پس‌زمینه‌ست (کاربر رفته سراغ تب/برنامه‌ی دیگه)، مرورگرها تایمرهای
+// setInterval رو کندتر اجرا می‌کنن (گاهی فقط هر چند دقیقه یک‌بار) — با وجود اینکه متن برنامه
+// قول داده بود «حتی توی یه تب دیگه هم سرِ وقت یادت می‌ندازه». برای این‌که آلارمی که توی این
+// فاصله رسیده دیر یا فراموش نشه، همین که کاربر برگرده به این تب، بلافاصله (نه بعد از یک ثانیه
+// بعدیِ تایمر) یه چک انجام می‌شه.
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible') checkAlarms();
+});
+
+// ---------------------------------------------------------------------
+// اعلانات فعال: هر بار مخاطب/معامله/رویداد/آلارمی ذخیره بشه، یه خطِ خلاصه هم این‌جا اضافه
+// می‌شه — یه فیدِ فعالیتِ یکپارچه از هر چهار بخش. روی events/notifications نگه داشته می‌شه
+// (همون قانونِ نوشتنِ events که بخش‌های دیگه هم استفاده می‌کنن کافیه).
+// ---------------------------------------------------------------------
+let notifications = [];
+const NOTIF_ICONS = { contact:'👤', deal:'🤝', log:'🗒️', alarm:'⏰', combo:'🧩' };
+
+function addNotificationEntry(type, text){
+  notifications = [...notifications, {
+    id: 'nt' + Date.now() + Math.random().toString(36).slice(2, 6),
+    type, text, createdAt: new Date().toISOString(),
+  }];
+  persistNotifications();
+  renderNotifications();
+}
+function removeNotification(id){
+  notifications = notifications.filter(n => n.id !== id);
+  persistNotifications();
+  renderNotifications();
+}
+function persistNotifications(){
+  if (!db) return;
+  db.doc('events/notifications').set({ items: notifications }).catch(() => {});
+}
+function renderNotifications(){
+  const list = document.getElementById('notifList');
+  if (!list) return;
+  const sorted = [...notifications].sort((a,b) => (b.createdAt||'').localeCompare(a.createdAt||''));
+  list.innerHTML = sorted.length ? sorted.map(n => `
+    <div class="notif-row">
+      <div class="notif-info"><span class="notif-ic">${NOTIF_ICONS[n.type] || '🔔'}</span>
+        <div><div>${esc(n.text)}</div><div class="notif-meta">${relTime(n.createdAt)}</div></div>
+      </div>
+      <button class="notif-dismiss" onclick="removeNotification('${esc(n.id)}')" title="حذف">✕</button>
+    </div>`).join('') : '<p class="hint">فعلاً اعلانی نیست.</p>';
+  const badge = document.getElementById('evBadgeNotifs');
+  if (badge){ badge.textContent = notifications.length; badge.classList.toggle('hidden', notifications.length === 0); }
+}
+
+// ---------------------------------------------------------------------
+// رویدادها: برخلاف «یادداشت آزاد» بالا (یک متنِ تکی که هر بار جایگزین می‌شود)،
+// این‌ها آیتم‌های جدا هستند — هرکدوم را جدا می‌شود ویرایش یا حذف کرد.
+// ---------------------------------------------------------------------
+function addEventNote(){
+  if (!db) return;
+  const input = document.getElementById('eventNoteInput');
+  const text = input.value.trim();
+  if (!text){ alert('متن رویداد خالیه.'); return; }
+  const contactSel = document.getElementById('logContactSelect');
+  const dealSel = document.getElementById('logDealSelect');
+  // باگ مشترک با آلارم‌ها: eventNotes هم مستقیماً از doc.data().items می‌آید (فریزشده)، پس
+  // به‌جای push، یک آرایه‌ی تازه جایگزین می‌شود.
+  eventNotes = [...eventNotes, {
+    id: 'ev' + Date.now() + Math.random().toString(36).slice(2, 6),
+    text, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(),
+    contactId: (contactSel && contactSel.value) || null,
+    dealId: (dealSel && dealSel.value) || null,
+  }];
+  addNotificationEntry('log', '🗒️ رویداد تازه ثبت شد: ' + text.slice(0, 60) + (text.length > 60 ? '…' : ''));
+  input.value = '';
+  if (contactSel) contactSel.value = '';
+  if (dealSel) dealSel.value = '';
+  persistEventNotes();
+  renderEventNotes();
+}
+function startEditEventNote(id){ editingEventNoteId = id; renderEventNotes(); }
+function cancelEditEventNote(){ editingEventNoteId = null; renderEventNotes(); }
+function saveEditEventNote(id){
+  const ta = document.getElementById('editEventText_' + id);
+  if (!ta) return;
+  const text = ta.value.trim();
+  if (!text){ alert('متن رویداد نمی‌تونه خالی باشه.'); return; }
+  eventNotes = eventNotes.map(n => n.id === id ? {...n, text, updatedAt: new Date().toISOString()} : n);
+  editingEventNoteId = null;
+  persistEventNotes();
+  renderEventNotes();
+}
+function removeEventNote(id){
+  eventNotes = eventNotes.filter(n => n.id !== id);
+  if (editingEventNoteId === id) editingEventNoteId = null;
+  persistEventNotes();
+  renderEventNotes();
+}
+function persistEventNotes(){
+  if (!db) return;
+  db.doc('events/notes').set({ items: eventNotes })
+    .catch(() => alert('ذخیره نشد — این حساب اجازه‌ی ویرایش این صفحه را ندارد.'));
+}
+function renderEventNotes(){
+  const list = document.getElementById('eventNoteList');
+  if (!list) return;
+  const sorted = [...eventNotes].sort((a,b) => (b.updatedAt||'').localeCompare(a.updatedAt||''));
+  list.innerHTML = sorted.length ? sorted.map(n => {
+    if (n.id === editingEventNoteId){
+      return `<div class="item-row">
+        <textarea id="editEventText_${esc(n.id)}">${esc(n.text)}</textarea>
+        <div class="item-actions">
+          <button class="mini" onclick="saveEditEventNote('${esc(n.id)}')">ذخیره تغییرات</button>
+          <button class="mini" onclick="cancelEditEventNote()">انصراف</button>
+        </div>
+      </div>`;
+    }
+    const chips = (n.contactId ? contactChip(n.contactId) : '') + (n.dealId ? dealChip(n.dealId) : '');
+    return `<div class="item-row">
+      <div>${esc(n.text).replace(/\n/g,'<br>')}</div>
+      ${chips ? `<div class="rel-chips">${chips}</div>` : ''}
+      <div class="item-meta">${relTime(n.updatedAt || n.createdAt)}</div>
+      <div class="item-actions">
+        <button class="mini" onclick="startEditEventNote('${esc(n.id)}')">ویرایش</button>
+        <button class="mini" onclick="removeEventNote('${esc(n.id)}')">حذف</button>
+      </div>
+    </div>`;
+  }).join('') : '<p class="hint">هنوز رویدادی ثبت نشده.</p>';
+  const badge = document.getElementById('evBadgeLog');
+  if (badge){ badge.textContent = eventNotes.length; badge.classList.toggle('hidden', eventNotes.length === 0); }
+}
+
+// ---------------------------------------------------------------------
+// مخاطبین: نام، شماره تماس، آیدی و یادداشت؛ هرکدوم قابل ویرایش/حذف،
+// و دکمه‌ی «یادآوری» که فرم آلارم را با نام همان مخاطب پر می‌کند.
+// ---------------------------------------------------------------------
+function addContact(){
+  if (!db) return;
+  const nameInput = document.getElementById('contactNameInput');
+  const phoneInput = document.getElementById('contactPhoneInput');
+  const socialInput = document.getElementById('contactSocialInput');
+  const notesInput = document.getElementById('contactNotesInput');
+  const name = nameInput.value.trim();
+  const phone = phoneInput.value.trim();
+  const socialId = socialInput.value.trim();
+  const notes = notesInput.value.trim();
+  if (!name && !phone){ alert('حداقل نام یا شماره تماس رو وارد کن.'); return; }
+  // همون باگِ فریزشدگی: به‌جای push، آرایه‌ی تازه.
+  contacts = [...contacts, {
+    id: 'ct' + Date.now() + Math.random().toString(36).slice(2, 6),
+    name, phone, socialId, notes,
+    createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(),
+  }];
+  addNotificationEntry('contact', '👤 مخاطب تازه ذخیره شد: ' + (name || phone));
+  nameInput.value = ''; phoneInput.value = ''; socialInput.value = ''; notesInput.value = '';
+  persistContacts();
+  renderContacts();
+}
+function startEditContact(id){ editingContactId = id; renderContacts(); }
+function cancelEditContact(){ editingContactId = null; renderContacts(); }
+function saveEditContact(id){
+  const name = document.getElementById('editContactName_' + id).value.trim();
+  const phone = document.getElementById('editContactPhone_' + id).value.trim();
+  const socialId = document.getElementById('editContactSocial_' + id).value.trim();
+  const notes = document.getElementById('editContactNotes_' + id).value.trim();
+  if (!name && !phone){ alert('حداقل نام یا شماره تماس رو وارد کن.'); return; }
+  contacts = contacts.map(c => c.id === id ? {...c, name, phone, socialId, notes, updatedAt: new Date().toISOString()} : c);
+  editingContactId = null;
+  persistContacts();
+  renderContacts();
+}
+function removeContact(id){
+  contacts = contacts.filter(c => c.id !== id);
+  if (editingContactId === id) editingContactId = null;
+  persistContacts();
+  renderContacts();
+}
+function persistContacts(){
+  if (!db) return;
+  db.doc('events/contacts').set({ items: contacts })
+    .catch(() => alert('ذخیره نشد — این حساب اجازه‌ی ویرایش این صفحه را ندارد.'));
+}
+function quickAlarmForContact(id){
+  const c = contacts.find(x => x.id === id);
+  if (!c) return;
+  alarmContactId = id;
+  selectEvSubTab('alarms');
+  const labelInput = document.getElementById('alarmLabelInput');
+  labelInput.value = 'تماس با ' + (c.name || c.phone || 'مخاطب');
+  const trigger = document.getElementById('alarmDateTrigger');
+  if (trigger && trigger.scrollIntoView) trigger.scrollIntoView({ behavior:'smooth', block:'center' });
+  openJalaliPicker();
+}
+function renderContacts(){
+  const list = document.getElementById('contactList');
+  if (!list) return;
+  const sorted = [...contacts].sort((a,b) => (a.name||'').localeCompare(b.name||'', 'fa'));
+  list.innerHTML = sorted.length ? sorted.map(c => {
+    if (c.id === editingContactId){
+      return `<div class="item-row">
+        <input type="text" id="editContactName_${esc(c.id)}" value="${esc(c.name||'')}" placeholder="نام و نام خانوادگی">
+        <input type="text" id="editContactPhone_${esc(c.id)}" value="${esc(c.phone||'')}" placeholder="شماره تماس">
+        <input type="text" id="editContactSocial_${esc(c.id)}" value="${esc(c.socialId||'')}" placeholder="آیدی">
+        <textarea id="editContactNotes_${esc(c.id)}" placeholder="مشخصات و یادداشت…">${esc(c.notes||'')}</textarea>
+        <div class="item-actions">
+          <button class="mini" onclick="saveEditContact('${esc(c.id)}')">ذخیره تغییرات</button>
+          <button class="mini" onclick="cancelEditContact()">انصراف</button>
+        </div>
+      </div>`;
+    }
+    const contactAlarms = alarms.filter(a => a.contactId === c.id);
+    const alarmsHtml = contactAlarms.length
+      ? `<div class="item-meta">⏰ ${contactAlarms.map(a => esc(formatAlarmTime(a.time)) + (a.firedAt ? ' (رسید)' : '')).join(' · ')}</div>` : '';
+    return `<div class="item-row">
+      <div><b>${esc(c.name || 'بدون نام')}</b></div>
+      ${c.phone ? `<div>📞 ${esc(c.phone)}</div>` : ''}
+      ${c.socialId ? `<div>🆔 ${esc(c.socialId)}</div>` : ''}
+      ${c.notes ? `<div class="item-meta">${esc(c.notes).replace(/\n/g,'<br>')}</div>` : ''}
+      ${alarmsHtml}
+      <div class="item-actions">
+        <button class="mini" onclick="quickAlarmForContact('${esc(c.id)}')">یادآوری</button>
+        <button class="mini" onclick="startEditContact('${esc(c.id)}')">ویرایش</button>
+        <button class="mini" onclick="removeContact('${esc(c.id)}')">حذف</button>
+      </div>
+    </div>`;
+  }).join('') : '<p class="hint">هنوز مخاطبی ثبت نشده.</p>';
+  const badge = document.getElementById('evBadgeContacts');
+  if (badge){ badge.textContent = contacts.length; badge.classList.toggle('hidden', contacts.length === 0); }
+  // باگ: انتخابگرهای مرتبط‌سازی (مثلاً «مرتبط با مخاطب» توی فرمِ معامله/رویداد/ترکیبی) فقط موقعِ
+  // renderDeals() تازه می‌شدن؛ یعنی اگه مخاطبی اضافه/حذف/ویرایش می‌شد ولی معامله‌ای تغییر نمی‌کرد،
+  // اون انتخابگرها تا یه رندرِ بعدیِ معاملات، لیستِ قدیمی (یا حتی مخاطبِ حذف‌شده) رو نشون می‌دادن.
+  populateRelationSelects();
+}
+
+// ---------------------------------------------------------------------
+// ثبت معامله: فرمِ چندمرحله‌ایِ کاملاً دلبخواه — نوع معامله، مالک/همکار، تعداد نفرات،
+// قیمت (اگه خرید/فروش بود) یا رهن/اجاره (اگه رهن بود)، و بیانیه. هر فیلد را می‌شود خالی گذاشت.
+// ---------------------------------------------------------------------
+function formatPriceInput(el){
+  const digits = normalizeNumbers(el.value || '').replace(/[^\d]/g, '');
+  el.value = digits ? Number(digits).toLocaleString('en-US') : '';
+}
+function parsePriceInput(val){
+  const digits = normalizeNumbers(val || '').replace(/[^\d]/g, '');
+  return digits ? Number(digits) : null;
+}
+
+function renderDealFormVisibility(){
+  const dealType = document.querySelector('input[name="dealType"]:checked');
+  const mortgageType = document.querySelector('input[name="mortgageType"]:checked');
+  const statement = document.querySelector('input[name="dealStatement"]:checked');
+  document.getElementById('dealSaleWrap').classList.toggle('hidden', !dealType || dealType.value !== 'sale');
+  document.getElementById('dealRentWrap').classList.toggle('hidden', !dealType || dealType.value !== 'rent');
+  document.getElementById('dealRentAmountInput').classList.toggle('hidden', !mortgageType || mortgageType.value !== 'rent');
+  document.getElementById('dealStatementPriceInput').classList.toggle('hidden', !statement || statement.value !== 'yes');
+}
+
+function collectDealFormData(){
+  const dealType = document.querySelector('input[name="dealType"]:checked');
+  const dealRole = document.querySelector('input[name="dealRole"]:checked');
+  const mortgageType = document.querySelector('input[name="mortgageType"]:checked');
+  const statement = document.querySelector('input[name="dealStatement"]:checked');
+  const othersCountRaw = normalizeNumbers(document.getElementById('dealOthersCountInput').value || '').trim();
+
+  const contactSel = document.getElementById('dealContactSelect');
+  const deal = {
+    dealType: dealType ? dealType.value : null,
+    role: dealRole ? dealRole.value : null,
+    contactId: (contactSel && contactSel.value) || null,
+    othersCount: (othersCountRaw !== '' && !isNaN(Number(othersCountRaw))) ? Number(othersCountRaw) : null,
+    salePrice: null,
+    mortgageType: null, mortgageAmount: null, rentAmount: null,
+    hasStatement: statement ? statement.value === 'yes' : null,
+    statementPrice: null,
+  };
+  if (deal.dealType === 'sale'){
+    deal.salePrice = parsePriceInput(document.getElementById('dealSalePriceInput').value);
+  }
+  if (deal.dealType === 'rent'){
+    deal.mortgageType = mortgageType ? mortgageType.value : null;
+    deal.mortgageAmount = parsePriceInput(document.getElementById('dealMortgageAmountInput').value);
+    if (deal.mortgageType === 'rent'){
+      deal.rentAmount = parsePriceInput(document.getElementById('dealRentAmountInput').value);
+    }
+  }
+  if (deal.hasStatement){
+    deal.statementPrice = parsePriceInput(document.getElementById('dealStatementPriceInput').value);
+  }
+  return deal;
+}
+
+function resetDealForm(){
+  document.querySelectorAll('#dealForm input[type=radio]').forEach(r => { r.checked = false; });
+  document.getElementById('dealOthersCountInput').value = '';
+  document.getElementById('dealSalePriceInput').value = '';
+  document.getElementById('dealMortgageAmountInput').value = '';
+  document.getElementById('dealRentAmountInput').value = '';
+  document.getElementById('dealStatementPriceInput').value = '';
+  const contactSel = document.getElementById('dealContactSelect');
+  if (contactSel) contactSel.value = '';
+  renderDealFormVisibility();
+}
+
+function addDeal(){
+  if (!db) return;
+  const data = collectDealFormData();
+  if (editingDealId){
+    const id = editingDealId;
+    deals = deals.map(d => d.id === id ? {...d, ...data, updatedAt: new Date().toISOString()} : d);
+    addNotificationEntry('deal', '🤝 معامله ویرایش شد: ' + dealSummaryText(data));
+    editingDealId = null;
+    document.getElementById('dealSubmitBtn').textContent = 'افزودن معامله';
+    document.getElementById('dealCancelBtn').classList.add('hidden');
+  } else {
+    data.id = 'dl' + Date.now() + Math.random().toString(36).slice(2, 6);
+    data.createdAt = new Date().toISOString();
+    data.updatedAt = data.createdAt;
+    // همون باگِ فریزشدگی: به‌جای push، آرایه‌ی تازه.
+    deals = [...deals, data];
+    addNotificationEntry('deal', '🤝 معامله‌ی تازه ثبت شد: ' + dealSummaryText(data));
+  }
+  resetDealForm();
+  persistDeals();
+  renderDeals();
+}
+
+function startEditDeal(id){
+  const d = deals.find(x => x.id === id);
+  if (!d) return;
+  editingDealId = id;
+  resetDealForm();
+  if (d.dealType === 'sale') document.getElementById('dealTypeSale').checked = true;
+  else if (d.dealType === 'rent') document.getElementById('dealTypeRent').checked = true;
+  if (d.role === 'owner') document.getElementById('dealRoleOwner').checked = true;
+  else if (d.role === 'colleague') document.getElementById('dealRoleColleague').checked = true;
+  document.getElementById('dealOthersCountInput').value = (d.othersCount !== null && d.othersCount !== undefined) ? d.othersCount : '';
+  document.getElementById('dealSalePriceInput').value = d.salePrice ? d.salePrice.toLocaleString('en-US') : '';
+  if (d.mortgageType === 'full') document.getElementById('dealMortgageFull').checked = true;
+  else if (d.mortgageType === 'rent') document.getElementById('dealMortgageRent').checked = true;
+  document.getElementById('dealMortgageAmountInput').value = d.mortgageAmount ? d.mortgageAmount.toLocaleString('en-US') : '';
+  document.getElementById('dealRentAmountInput').value = d.rentAmount ? d.rentAmount.toLocaleString('en-US') : '';
+  if (d.hasStatement === true) document.getElementById('dealStatementYes').checked = true;
+  else if (d.hasStatement === false) document.getElementById('dealStatementNo').checked = true;
+  document.getElementById('dealStatementPriceInput').value = d.statementPrice ? d.statementPrice.toLocaleString('en-US') : '';
+  const contactSel = document.getElementById('dealContactSelect');
+  if (contactSel) contactSel.value = d.contactId || '';
+  renderDealFormVisibility();
+  document.getElementById('dealSubmitBtn').textContent = 'ذخیره تغییرات معامله';
+  document.getElementById('dealCancelBtn').classList.remove('hidden');
+  const form = document.getElementById('dealForm');
+  if (form.scrollIntoView) form.scrollIntoView({ behavior:'smooth', block:'center' });
+}
+
+function cancelEditDeal(){
+  editingDealId = null;
+  resetDealForm();
+  document.getElementById('dealSubmitBtn').textContent = 'افزودن معامله';
+  document.getElementById('dealCancelBtn').classList.add('hidden');
+}
+
+function removeDeal(id){
+  deals = deals.filter(d => d.id !== id);
+  if (editingDealId === id) cancelEditDeal();
+  persistDeals();
+  renderDeals();
+}
+
+function persistDeals(){
+  if (!db) return;
+  db.doc('events/deals').set({ items: deals })
+    .catch(() => alert('ذخیره نشد — این حساب اجازه‌ی ویرایش این صفحه را ندارد.'));
+}
+
+function dealSummaryText(d){
+  const parts = [];
+  if (d.dealType === 'sale') parts.push('خرید و فروش');
+  else if (d.dealType === 'rent') parts.push('رهن' + (d.mortgageType === 'rent' ? ' و اجاره' : d.mortgageType === 'full' ? ' کامل' : ''));
+  if (d.role) parts.push(d.role === 'owner' ? 'مالک' : 'همکار');
+  if (d.othersCount !== null && d.othersCount !== undefined) parts.push(d.othersCount + ' نفر دیگر دخیل');
+  if (d.dealType === 'sale' && d.salePrice) parts.push('قیمت: ' + d.salePrice.toLocaleString('en-US') + ' تومان');
+  if (d.dealType === 'rent'){
+    if (d.mortgageAmount) parts.push('رهن: ' + d.mortgageAmount.toLocaleString('en-US') + ' تومان');
+    if (d.mortgageType === 'rent' && d.rentAmount) parts.push('اجاره: ' + d.rentAmount.toLocaleString('en-US') + ' تومان');
+  }
+  if (d.hasStatement) parts.push('بیانیه' + (d.statementPrice ? (': ' + d.statementPrice.toLocaleString('en-US') + ' تومان') : ''));
+  return parts.length ? parts.join(' · ') : 'بدون اطلاعات ثبت‌شده';
+}
+
+// ---------------------------------------------------------------------
+// ترکیبِ اختیاریِ بخش‌ها: مخاطبین، معاملات، رویدادها و یادآوری‌ها می‌تونن به هم ربط داده بشن —
+// مثلاً یه معامله رو به یه مخاطبِ خاص وصل کنی، یا یه آلارم رو هم به مخاطب هم به معامله‌اش.
+// هیچ‌کدوم اجباری نیست؛ این تابع فقط گزینه‌های select رو از رویِ لیستِ زنده‌ی contacts/deals
+// پر می‌کنه (و انتخابِ فعلی رو، اگه هنوز معتبره، نگه می‌داره).
+// ---------------------------------------------------------------------
+function relSelectOptions(items, labelFn, selectedId){
+  return '<option value="">— هیچ‌کدام —</option>' + items.map(it =>
+    `<option value="${esc(it.id)}"${it.id === selectedId ? ' selected' : ''}>${esc(labelFn(it))}</option>`).join('');
+}
+function populateRelationSelects(){
+  const sortedContacts = [...contacts].sort((a,b) => (a.name||'').localeCompare(b.name||'', 'fa'));
+  const sortedDeals = [...deals].sort((a,b) => (b.updatedAt||'').localeCompare(a.updatedAt||''));
+  const contactLabel = c => c.name || c.phone || 'بدون نام';
+  const dealLabel = d => dealSummaryText(d).slice(0, 40);
+
+  [
+    { id: 'dealContactSelect', items: sortedContacts, label: contactLabel },
+    { id: 'logContactSelect', items: sortedContacts, label: contactLabel },
+    { id: 'logDealSelect', items: sortedDeals, label: dealLabel },
+    { id: 'alarmContactSelect', items: sortedContacts, label: contactLabel },
+    { id: 'alarmDealSelect', items: sortedDeals, label: dealLabel },
+    { id: 'comboContactSelect', items: sortedContacts, label: contactLabel },
+  ].forEach(({ id, items, label }) => {
+    const sel = document.getElementById(id);
+    if (!sel) return;
+    const keep = (id === 'alarmContactSelect' && alarmContactId) ? alarmContactId : sel.value;
+    sel.innerHTML = relSelectOptions(items, label, keep);
+  });
+}
+function contactChip(id){
+  const c = contacts.find(x => x.id === id);
+  return c ? `<span class="rel-chip">👤 ${esc(c.name || c.phone || 'مخاطب')}</span>` : '';
+}
+function dealChip(id){
+  const d = deals.find(x => x.id === id);
+  return d ? `<span class="rel-chip">🤝 ${esc(dealSummaryText(d).slice(0, 30))}</span>` : '';
+}
+
+// ---------------------------------------------------------------------
+// «ثبت ترکیبی»: به‌جای رفتن تب‌به‌تب، همه‌چیز رو یه‌جا پر می‌کنی — مخاطب، رویداد، معامله،
+// یادآوری — و هرکدوم رو که واقعاً پر کرده باشی همون ذخیره می‌شه (بقیه نادیده گرفته می‌شن)،
+// و با همون contactId به‌هم وصل می‌مونن؛ دقیقاً مثلِ وقتی که از تب‌های جدا همین کار رو بکنی،
+// فقط یه کلیک به‌جای چندتا.
+// ---------------------------------------------------------------------
+function addComboEntry(){
+  if (!db) return;
+  const existingSel = document.getElementById('comboContactSelect');
+  const newNameInput = document.getElementById('comboNewContactName');
+  const newPhoneInput = document.getElementById('comboNewContactPhone');
+  const noteInput = document.getElementById('comboNoteInput');
+  const dealSaleEl = document.getElementById('comboDealTypeSale');
+  const dealRentEl = document.getElementById('comboDealTypeRent');
+  const dealPriceInput = document.getElementById('comboDealPriceInput');
+  const alarmLabelInput = document.getElementById('comboAlarmLabelInput');
+
+  let contactId = existingSel.value || null;
+  const newName = newNameInput.value.trim();
+  const newPhone = newPhoneInput.value.trim();
+  const noteText = noteInput.value.trim();
+  const dealType = dealSaleEl.checked ? 'sale' : (dealRentEl.checked ? 'rent' : null);
+  const dealPrice = parsePriceInput(dealPriceInput.value);
+  const hasAlarm = !!comboPickerISO;
+
+  if (!contactId && !newName && !newPhone && !noteText && !dealType && !hasAlarm){
+    alert('حداقل یکی از بخش‌ها (مخاطب، رویداد، معامله یا یادآوری) رو پر کن.');
+    return;
+  }
+
+  const nowIso = new Date().toISOString();
+  let contactsChanged = false, dealsChanged = false, notesChanged = false, alarmsChanged = false;
+  let createdContact = null, createdDeal = null;
+
+  // اگه مخاطبِ موجود انتخاب نشده ولی نام یا تلفنِ تازه‌ای وارد شده، یه مخاطبِ جدید می‌سازیم
+  // و بقیه‌ی بخش‌ها (رویداد/معامله/یادآوری) خودکار به همین مخاطبِ تازه وصل می‌شن.
+  if (!contactId && (newName || newPhone)){
+    createdContact = {
+      id: 'ct' + Date.now() + Math.random().toString(36).slice(2, 6),
+      name: newName, phone: newPhone, socialId: '', notes: '',
+      createdAt: nowIso, updatedAt: nowIso,
+    };
+    contacts = [...contacts, createdContact];
+    contactId = createdContact.id;
+    contactsChanged = true;
+  }
+
+  if (dealType){
+    createdDeal = {
+      id: 'dl' + Date.now() + Math.random().toString(36).slice(2, 6),
+      dealType, role: null, othersCount: null,
+      salePrice: dealType === 'sale' ? dealPrice : null,
+      mortgageType: dealType === 'rent' ? 'full' : null,
+      mortgageAmount: dealType === 'rent' ? dealPrice : null,
+      rentAmount: null, hasStatement: null, statementPrice: null,
+      contactId: contactId || null,
+      createdAt: nowIso, updatedAt: nowIso,
+    };
+    deals = [...deals, createdDeal];
+    dealsChanged = true;
+  }
+
+  if (noteText){
+    eventNotes = [...eventNotes, {
+      id: 'ev' + Date.now() + Math.random().toString(36).slice(2, 6),
+      text: noteText, createdAt: nowIso, updatedAt: nowIso,
+      contactId: contactId || null,
+      dealId: createdDeal ? createdDeal.id : null,
+    }];
+    notesChanged = true;
+  }
+
+  if (hasAlarm){
+    alarms = [...alarms, {
+      id: 'al' + Date.now() + Math.random().toString(36).slice(2, 6),
+      time: comboPickerISO,
+      label: alarmLabelInput.value.trim(),
+      firedAt: null,
+      contactId: contactId || null,
+      dealId: createdDeal ? createdDeal.id : null,
+    }];
+    alarmsChanged = true;
+  }
+
+  const madeParts = [];
+  if (createdContact) madeParts.push('مخاطب');
+  if (dealsChanged) madeParts.push('معامله');
+  if (notesChanged) madeParts.push('رویداد');
+  if (alarmsChanged) madeParts.push('یادآوری');
+  const linkedName = !createdContact && contactId ? (contacts.find(c => c.id === contactId) || {}).name : null;
+  addNotificationEntry('combo', '🧩 ثبتِ ترکیبی: ' + madeParts.join(' + ') + (linkedName ? ' — مرتبط با ' + linkedName : ''));
+
+  // پاک کردنِ فرم
+  existingSel.value = ''; newNameInput.value = ''; newPhoneInput.value = '';
+  noteInput.value = ''; dealSaleEl.checked = false; dealRentEl.checked = false; dealPriceInput.value = '';
+  alarmLabelInput.value = ''; comboPickerISO = null;
+  const trigger = document.getElementById('comboDateTrigger');
+  if (trigger) trigger.textContent = '📅 انتخاب تاریخ و ساعت (اختیاری)';
+
+  if (contactsChanged) persistContacts();
+  if (dealsChanged) persistDeals();
+  if (notesChanged) persistEventNotes();
+  if (alarmsChanged) persistAlarms();
+  renderContacts(); renderDeals(); renderEventNotes(); renderAlarms();
+}
+
+function renderDeals(){
+  const list = document.getElementById('dealList');
+  if (!list) return;
+  const sorted = [...deals].sort((a,b) => (b.updatedAt||'').localeCompare(a.updatedAt||''));
+  list.innerHTML = sorted.length ? sorted.map(d => `
+    <div class="item-row">
+      <div>${esc(dealSummaryText(d))}</div>
+      ${d.contactId ? `<div class="rel-chips">${contactChip(d.contactId)}</div>` : ''}
+      <div class="item-meta">${relTime(d.updatedAt || d.createdAt)}</div>
+      <div class="item-actions">
+        <button class="mini" onclick="startEditDeal('${esc(d.id)}')">ویرایش</button>
+        <button class="mini" onclick="removeDeal('${esc(d.id)}')">حذف</button>
+      </div>
+    </div>`).join('') : '<p class="hint">هنوز معامله‌ای ثبت نشده.</p>';
+  const badge = document.getElementById('evBadgeDeals');
+  if (badge){ badge.textContent = deals.length; badge.classList.toggle('hidden', deals.length === 0); }
+  populateRelationSelects();
+}
+
+function selectManualZone(z){ manualZone = z; manualBlock = null; renderManual(); }
+function selectManualBlock(b){ manualBlock = b; renderManual(); }
+function manualBack(){
+  if (manualBlock !== null) manualBlock = null;
+  else manualZone = null;
+  renderManual();
+}
+
+const MANUAL_BLOCK_COUNT = 140;
+
+function renderManual(){
+  const zoneGridEl = document.getElementById('manualZoneGrid');
+  const blockWrapEl = document.getElementById('manualBlockWrap');
+  const resultsWrapEl = document.getElementById('manualResultsWrap');
+  if (!zoneGridEl) return;   // هنوز رندر اول انجام نشده
+
+  if (manualZone === null){
+    zoneGridEl.classList.remove('hidden'); blockWrapEl.classList.add('hidden'); resultsWrapEl.classList.add('hidden');
+    if (!zoneGridEl.dataset.built){
+      zoneGridEl.innerHTML = [1,2,3,4,5].map(z => `<button onclick="selectManualZone(${z})">زون ${z}</button>`).join('');
+      zoneGridEl.dataset.built = '1';
+    }
+    return;
+  }
+
+  zoneGridEl.classList.add('hidden');
+
+  if (manualBlock === null){
+    blockWrapEl.classList.remove('hidden'); resultsWrapEl.classList.add('hidden');
+    const occupied = new Set(allListings.filter(l => !l.archived && l.zone === manualZone).map(l => l.block));
+    let html = '';
+    for (let b = 1; b <= MANUAL_BLOCK_COUNT; b++){
+      html += `<button class="${occupied.has(b)?'has-listings':''}" onclick="selectManualBlock(${b})">${b}</button>`;
+    }
+    document.getElementById('manualBlockGrid').innerHTML = html;
+    return;
+  }
+
+  blockWrapEl.classList.add('hidden'); resultsWrapEl.classList.remove('hidden');
+  const active = allListings.filter(l => !l.archived);
+  const items = groupListings(active.filter(l => l.zone === manualZone && l.block === manualBlock))
+    .sort((a,b) => (a.price ?? Infinity) - (b.price ?? Infinity));
+  document.getElementById('manualList').innerHTML = items.length
+    ? items.map(listingCardHtml).join('')
+    : '<div class="empty">فایلی برای این بلوک ثبت نشده.</div>';
+}
+
+function normalizeNumbers(text){
+  const fa = '۰۱۲۳۴۵۶۷۸۹', ar = '٠١٢٣٤٥٦٧٨٩';
+  return text.replace(/[۰-۹٠-٩]/g, ch => {
+    let i = fa.indexOf(ch); if (i === -1) i = ar.indexOf(ch);
+    return i === -1 ? ch : String(i);
+  });
+}
+
+// پاک‌سازیِ کاراکترهای نامرئی/عربیِ رایج در متن‌های کپی‌شده که رجکس‌ها را می‌شکنند:
+// نیم‌فاصله (ZWNJ) و ZWJ و علامت‌های جهت متن باید فاصله بشوند وگرنه «بلوک‌۷۶» هرگز با
+// «بلوک» + فاصله + عدد مچ نمی‌شود؛ اعراب عربی هم حذف و ي/ك عربی به ی/ک فارسی تبدیل می‌شود.
+function normalizeChars(text){
+  return text
+    .replace(/[‌‍‎‏]/g, ' ')
+    .replace(/[ً-ْ]/g, '')
+    .replace(/ي/g, 'ی').replace(/ك/g, 'ک');
+}
+
+// --------------------------------------------------------------------
+// الگوهای مشترک (هم برای آگهی‌های فروش، هم برای تشخیص پیام‌های خریدار)
+// --------------------------------------------------------------------
+const zoneRe = /(?:زون|ز|ض|ظ|ذ|z)\s*[:\-]?\s*([1-5])(?!\d)/i;
+// کوهسار و غدیر: دو پروژه‌ی کاملاً جدا از هم و جدا از ۵ زونِ فاز ۱۱ — هر آگهی که یکی از این
+// کلمه‌ها رو داشته باشه (صرف‌نظر از این‌که عددِ زون یا فاز هم توش باشه یا نه)، می‌ره توی بخشِ
+// مخصوصِ خودِ همون پروژه. قبلاً هر دو زیرِ یه زونِ مشترکِ 'ghadir' ذخیره می‌شدن که باعث می‌شد
+// دو آگهیِ کاملاً بی‌ربط (یکی کوهسار، یکی غدیر) با بلوکِ یکسان، اشتباهاً «تکراری» تشخیص داده
+// بشن (چون کلیدِ تشخیصِ تکراری شاملِ زونه) — برای همین هر پروژه زونِ جداگانه‌ی خودش رو داره.
+const kuhsarRe = /کوهسار/;
+const ghadirOnlyRe = /غدیر/;
+const ghadirAreaRe = /غدیر|کوهسار/;
+const blockRe = /(?:بلوک|بلاک|ب)\s*[:\-]?\s*(\d{1,3})(?!\d)/i;
+const floorRe = /(?:طبقه|ط)\s*[:\-]?\s*(\d{1,2})(?!\d)/i;
+// طبقه‌ی همکف عدد ندارد؛ چون همکف‌ها هم ساکن/فایل دارند، جدا تشخیص داده می‌شود و روی طبقه‌ی ۰ می‌شیند
+const groundFloorRe = /هم\s*کف/i;
+const priceSlashRe = /(?<!\d)(\d{1,2})\s*[/.,]\s*(\d{3})(?!\d)/;
+const priceFlatRe = /(?<!\d)(\d{4,5})(?!\d)/;
+const phoneRe = /(0?9\d{9})/;
+const letterBoundary = '(?<![آ-ی])%s(?![آ-ی])';
+// «فاز11» یا «ف11» یا «فاز یازده» — حرف تنهای «ف» فقط وقتی مستقل باشد (نه بخشی از «فول»/«فروش»)
+const phase11Re = /فاز\s*[:\-]?\s*(?:11|یازده)(?!\d)|(?<![آ-ی])ف(?![آ-ی])\s*[:\-]?\s*11(?!\d)/i;
+const phaseAnyRe = /(?:فاز|(?<![آ-ی])ف(?![آ-ی]))\s*[:\-]?\s*(\d{1,2}|یازده)(?!\d)/gi;
+// نشانه‌ی «این یک تقاضانامه/درخواست خریدار است، نه فایل فروش» — مستقل از زون/فاز بررسی می‌شود
+const buyerRe = /خریدار|خواهان|خرید\s*داریم|خریداریم|متقاضی|مشتری\s*دارم/;
+const dirMap = [
+  [/جنوب\s*غرب|ج\s*غ/, 'جنوب‌غربی'], [/جنوب\s*شرق|ج\s*ش/, 'جنوب‌شرقی'],
+  [/شمال\s*غرب|ش\s*غ/, 'شمال‌غربی'], [/شمال\s*شرق|ش\s*ش/, 'شمال‌شرقی'],
+  [/شمال/, 'شمالی'], [/جنوب/, 'جنوبی'], [/شرق/, 'شرقی'], [/غرب/, 'غربی'],
+  // مخفف تک‌حرفی، فقط وقتی تنها آمده (نه بخشی از ترکیب بالا): ش تنها = شمالی (نه شرقی)
+  [new RegExp(letterBoundary.replace('%s','ش')), 'شمالی'],
+  [new RegExp(letterBoundary.replace('%s','ج')), 'جنوبی'],
+  [new RegExp(letterBoundary.replace('%s','غ')), 'غربی'],
+];
+
+// متن خام را به «رکورد»های جدا (هر رکورد = یک پیام/آگهی/درخواست) می‌شکند.
+// مرحله ۱: هر رشته‌ی ۲ خط خالی یا بیشتر، مرز قطعیِ بین دو رکورد است (فاصله‌ای که خودِ کاربر
+// موقع تایپ/پیست بین آگهی‌ها می‌گذارد). مرحله ۲: داخل هر بلوک، اگر باز هم بیش از یک نشانه‌ی
+// «زون» یا هر «فاز»ی دیده شد (مثلاً متن خام گروه با ردیف ایموجی به‌جای خط خالی، یا چند آگهی از
+// فازهای مختلف پشت‌سرهم)، از همان‌جا رکورد بعدی جدا می‌شود — تشخیصِ «مال ما هست یا نه» و
+// «آگهی است یا تقاضای خریدار» جداگانه و بعد از این مرحله انجام می‌شود.
+function splitIntoRecords(rawText){
+  // خط‌های نرمال‌شده برای تشخیص، و خط‌های اصلی (عیناً همان چیزی که کاربر پیست کرده) برای نمایش.
+  // نرمال‌سازی هیچ خطی را کم/زیاد نمی‌کند، پس این دو آرایه همیشه هم‌اندازه‌اند.
+  const originalLines = rawText.replace(/\r\n/g, '\n').split('\n');
+  let normalizedLines = normalizeNumbers(normalizeChars(rawText)).replace(/\r\n/g, '\n').split('\n');
+  if (normalizedLines.length !== originalLines.length) normalizedLines = originalLines;
+
+  const blocks = []; let block = []; let blankRun = 0;
+  for (let i = 0; i < normalizedLines.length; i++){
+    const line = normalizedLines[i].trim();
+    if (!line){
+      blankRun++;
+      if (blankRun >= 2 && block.length){ blocks.push(block); block = []; }
+    } else {
+      blankRun = 0; block.push({ n: line, o: originalLines[i].trim() });
+    }
+  }
+  if (block.length) blocks.push(block);
+
+  const records = [];
+  let blockIndex = -1;
+  const push = cur => { if (cur.length) records.push({ lines: cur.map(x => x.n), raw: trimSeparatorLines(cur.map(x => x.o)).join('\n'), blockIndex }); };
+  for (const b of blocks){
+    blockIndex++;
+    let current = []; let hasMarker = false;
+    for (const item of b){
+      const isMarker = zoneRe.test(item.n) || phaseAnyRe.test(item.n);
+      phaseAnyRe.lastIndex = 0;   // regex سراسری (g) است؛ state بین فراخوانی‌ها ریست شود
+      if (isMarker && hasMarker){ push(current); current = []; hasMarker = false; }
+      current.push(item); if (isMarker) hasMarker = true;
+    }
+    push(current);
+  }
+  return records;
+}
+
+// ردیف‌های ایموجی/علامت (مثل 🟩🟩🟩) که فقط جداکننده‌ی بین آگهی‌ها هستند، از ابتدا و انتهای
+// متن نمایشیِ هر آگهی برداشته می‌شوند تا آگهی‌ها قاطی نشوند؛ خطوط وسط آگهی دست‌نخورده می‌مانند.
+function trimSeparatorLines(lines){
+  const hasContent = l => /[\p{L}\p{N}]/u.test(l);
+  let a = 0, b = lines.length;
+  while (a < b && !hasContent(lines[a])) a++;
+  while (b > a && !hasContent(lines[b-1])) b--;
+  return lines.slice(a, b);
+}
+
+// قیمت را عیناً همان‌طور که در متن آمده (مثل 7350 یا 7/350) برمی‌گرداند، به‌اضافه‌ی عددِ
+// معادلش (به میلیون تومان) که فقط برای مرتب‌سازی و آمار استفاده می‌شود، نه برای نمایش.
+function parsePrice(text){
+  const slash = text.match(priceSlashRe);
+  if (slash) return { price: parseInt(slash[1])*1000 + parseInt(slash[2].padEnd(3,'0')), priceText: slash[0].replace(/\s+/g, '') };
+  const flat = text.match(priceFlatRe);
+  if (flat) return { price: parseInt(flat[1]), priceText: flat[1] };
+  return { price: null, priceText: null };
+}
+
+function extractAds(rawText){
+  const records = splitIntoRecords(rawText);
+  const ads = [];
+  for (const rec of records){
+    const joined = rec.lines.join(' ');
+
+    // پیام‌های تقاضای خریدار، آگهیِ فروش نیستند — اصلاً به‌عنوان فایل بررسی نمی‌شوند
+    // (برچسب‌زدن و نمایش‌شان جدا، توسط extractBuyerRequests انجام می‌شود).
+    if (buyerRe.test(joined)) continue;
+
+    // کوهسار و غدیر دو پروژه‌ی جدا، نه زونی از فاز ۱۱ — پس هیچ‌کدوم از قوانینِ «باید فاز۱۱
+    // باشه» یا «باید عددِ زون داشته باشه» براشون صدق نمی‌کنه؛ خودِ کلمه‌ی مربوطه کافیه.
+    // اگه یه آگهی عجیب هر دو کلمه رو داشت، کوهسار اولویت داره (محتاطانه‌تر از قاطی‌شدنِ دو پروژه‌ست).
+    const isKuhsar = kuhsarRe.test(joined);
+    const isGhadirOnly = !isKuhsar && ghadirOnlyRe.test(joined);
+    const isGhadir = isKuhsar || isGhadirOnly;
+
+    if (!isGhadir){
+      // فقط فاز ۱۱ می‌خواهیم: یا کلمه‌ی زون/مخفف‌هایش آمده، یا صریحاً فاز۱۱ نوشته شده.
+      // اگر صراحتاً فاز دیگری (غیر از ۱۱) نام برده شده، حتی با وجود کلمه‌ی زون، رد کن.
+      const mentionedPhases = [...joined.matchAll(phaseAnyRe)].map(m => m[1]);
+      const mentionsOtherPhase = mentionedPhases.some(p => p !== '11' && p !== 'یازده');
+      const mentionsPhase11 = phase11Re.test(joined);
+      if (mentionsOtherPhase && !mentionsPhase11) continue;
+    }
+
+    const zm = joined.match(zoneRe);
+    if (!isGhadir && !zm) continue;   // بدون شماره‌ی زون نمی‌توان رکورد ساخت، مگر کوهسار/غدیر باشد
+    // بلوک هم مثل طبقه اختیاریه: بعضی آگهی‌ها بلوک رو ذکر نمی‌کنن؛ چنین آگهی‌ای رد نمی‌شه،
+    // فقط توی «انتخاب دستی» (که بر اساس بلوک فیلتر می‌کنه) نشون داده نمی‌شه، در اکسپلور هست
+    const bm = joined.match(blockRe);
+
+    const fm = joined.match(floorRe); const phm = joined.match(phoneRe);
+    // همکف عدد ندارد؛ اگر عدد طبقه پیدا نشد ولی کلمه‌ی «همکف» بود، طبقه = ۰
+    const floor = fm ? +fm[1] : (groundFloorRe.test(joined) ? 0 : null);
+    const { price, priceText } = parsePrice(joined);
+    let direction = null;
+    for (const [re,label] of dirMap){ if (re.test(joined)){ direction = label; break; } }
+    const zoneVal = isKuhsar ? 'kuhsar' : (isGhadirOnly ? 'ghadir' : +zm[1]);
+    ads.push({ zone: zoneVal, block: bm?+bm[1]:null, floor, price, priceText, phone: phm?phm[1]:null, direction, raw: rec.raw, _blockIndex: rec.blockIndex });
+  }
+
+  // بعضی وقتا توی یه پیام چند تا فایل پشتِ‌سرِهم (با مرزِ «زون»، نه خط خالی) نوشته می‌شن و فقط
+  // آخرِ همه‌شون، یه‌بار، شماره‌تلفن می‌آد که برای همه‌ی فایل‌های همون پیام صدق می‌کنه. اگه یه فایل
+  // خودش شماره نداشت ولی توی همون «بلوک» (پاراگرافِ بین دو خط خالی) دقیقاً یه شماره‌ی دیگه بود،
+  // همون رو بهش نسبت می‌دیم. اگه چند شماره‌ی متفاوت توی بلوک بود، برای جلوگیری از اشتباه دست‌نمی‌زنیم.
+  const byBlock = new Map();
+  for (const ad of ads){
+    if (!byBlock.has(ad._blockIndex)) byBlock.set(ad._blockIndex, []);
+    byBlock.get(ad._blockIndex).push(ad);
+  }
+  for (const group of byBlock.values()){
+    const distinctPhones = [...new Set(group.map(a => a.phone).filter(Boolean))];
+    if (distinctPhones.length === 1){
+      for (const ad of group){ if (!ad.phone) ad.phone = distinctPhones[0]; }
+    }
+  }
+  for (const ad of ads) delete ad._blockIndex;
+
+  return ads;
+}
+
+// پیام‌هایی که تقاضای خریدار هستند (نه فایل فروش) را جدا برمی‌گرداند — مستقل از زون/فاز،
+// چون خریدار می‌تواند اصلاً به فاز یا زونی اشاره نکرده باشد یا حتی فاز۱۱ را هم نام ببرد.
+function extractBuyerRequests(rawText){
+  const records = splitIntoRecords(rawText);
+  const requests = [];
+  for (const rec of records){
+    const joined = rec.lines.join(' ');
+    if (!buyerRe.test(joined)) continue;
+    const phm = joined.match(phoneRe);
+    requests.push({ text: rec.raw, phone: phm ? phm[1] : null });
+  }
+  return requests;
+}
+
+// تطبیقِ خودکار: متنِ خامِ هر «خواهان» رو عیناً مثلِ یه آگهی می‌خونه تا زون و سقفِ قیمتِ
+// موردنظرش رو (اگه توی متنش اومده باشه) حدس بزنه — چون فعلاً ساختاری ذخیره نشده، فقط متنه.
+function buyerCriteria(b){
+  const joined = b.text || '';
+  const isKuhsar = kuhsarRe.test(joined);
+  const isGhadirOnly = !isKuhsar && ghadirOnlyRe.test(joined);
+  const zm = joined.match(zoneRe);
+  const zone = isKuhsar ? 'kuhsar' : (isGhadirOnly ? 'ghadir' : (zm ? +zm[1] : null));
+  const { price } = parsePrice(joined);
+  return { zone, maxPrice: price };
+}
+
+// فایلِ تازه‌ثبت‌شده رو با خواهان‌های ذخیره‌شده مقایسه می‌کنه: اگه خواهان زونی مشخص کرده باشه باید
+// با زونِ فایل یکی باشه، و اگه سقفِ قیمتی مشخص کرده باشه، قیمتِ فایل نباید ازش بیشتر باشه.
+// خواهانی که هیچ زون/قیمتی توی متنش نیست، برای جلوگیری از شلوغیِ بی‌فایده نادیده گرفته می‌شه.
+function findMatchingBuyers(ad){
+  return allBuyers.filter(b => {
+    const c = buyerCriteria(b);
+    if (c.zone === null && c.maxPrice === null) return false;
+    if (c.zone !== null && String(c.zone) !== String(ad.zone)) return false;
+    if (c.maxPrice != null && ad.price != null && ad.price > c.maxPrice) return false;
+    return true;
+  });
+}
+
+// برای یه دسته آگهیِ تازه‌ذخیره‌شده، خلاصه‌ی خواهان‌های مچ‌شده رو به‌صورت HTML برمی‌گردونه (یا رشته‌ی خالی).
+function matchedBuyersSummaryHtml(ads){
+  const matchedByBuyerId = new Map();
+  for (const ad of ads){
+    for (const b of findMatchingBuyers(ad)){
+      if (!matchedByBuyerId.has(b.id)) matchedByBuyerId.set(b.id, b);
+    }
+  }
+  if (!matchedByBuyerId.size) return '';
+  const rows = [...matchedByBuyerId.values()].map(b =>
+    `<div style="padding:6px 10px; background:var(--bg); border:1px solid #b0503f; border-radius:8px; margin-top:6px; font-size:.78rem;">${b.phone ? esc(b.phone) : 'بدون شماره'} — ${esc(buyerSnippet(b.text))}</div>`
+  ).join('');
+  return `<p class="hint" style="margin-top:12px; color:var(--brass-400);">🙋 ${matchedByBuyerId.size} خواهان شاید به این فایل(ها) علاقه داشته باشن:</p>${rows}`;
+}
+
+function processPaste(){
+  const rawText = document.getElementById('pasteBox').value;
+  const ads = extractAds(rawText);
+  const buyers = extractBuyerRequests(rawText);
+  const box = document.getElementById('pasteResults');
+
+  if (!ads.length && !buyers.length){
+    box.innerHTML = '<p class="hint" style="margin-top:12px;">آگهی یا درخواستی پیدا نشد.</p>';
+    return;
+  }
+
+  // تشخیص تکراری: هم در برابر فایل‌های موجود، هم در خودِ همین دسته‌ی تازه پیست‌شده
+  const existingCounts = countDupKeys(allListings.filter(l => !l.archived));
+  const batchCounts = countDupKeys(ads);
+  const dupNote = ad => {
+    const k = dedupKey(ad);
+    const already = existingCounts[k] || 0;
+    const inBatch = batchCounts[k] || 0;
+    if (already > 0) return ' <span class="dup-badge">🔁 قبلاً ثبت شده</span>';
+    if (inBatch > 1) return ' <span class="dup-badge">🔁 در همین پیست تکراری</span>';
+    return '';
+  };
+
+  const dupTotal = ads.filter(ad => (existingCounts[dedupKey(ad)] || 0) > 0 || (batchCounts[dedupKey(ad)] || 0) > 1).length;
+  // «غیر تکراری»: نه قبلاً ثبت شده، نه خودش هم داخل همین پیست بیش از یک‌بار تکرار شده
+  const nonDupAds = ads.filter(ad => (existingCounts[dedupKey(ad)] || 0) === 0 && (batchCounts[dedupKey(ad)] || 0) === 1);
+  const adRows = ads.map(ad => `<div style="display:flex;justify-content:space-between;align-items:center;background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:9px 12px;font-size:.8rem;margin-top:8px;">
+      <span>${zoneLabel(ad.zone)} · بلوک ${ad.block ?? 'نامشخص'}${floorLabel(ad.floor)?' · طبقه '+floorLabel(ad.floor):''}${ad.direction?' · '+ad.direction:''}${ad.phone?' · '+ad.phone:''}${dupNote(ad)}</span>
+      <span dir="ltr" style="color:var(--brass-400);font-weight:700;">${esc(ad.priceText) || '—'}</span></div>`).join('');
+
+  const buyerRows = buyers.map(b => `<div style="display:flex;justify-content:space-between;align-items:center;background:var(--bg);border:1px solid #b0503f;border-radius:8px;padding:9px 12px;font-size:.8rem;margin-top:8px;">
+      <span><span style="background:#b0503f;color:#fff;border-radius:6px;padding:1px 8px;font-size:.7rem;margin-left:8px;">خریدار</span>${esc(b.phone)||'بدون شماره'}</span></div>`).join('');
+
+  const adsPart = ads.length
+    ? `<p class="hint" style="margin-top:12px;">${ads.length} آگهی فروش پیدا شد${dupTotal ? ' (' + dupTotal + ' مورد تکراری)' : ''}:</p>${adRows}
+       <div style="display:flex; gap:8px; margin-top:10px;">
+         <button style="flex:1; width:auto;" id="confirmSaveBtn">افزودن کامل (${ads.length} مورد)</button>
+         <button style="flex:1; width:auto; background:var(--oak-500);" id="confirmNonDupBtn" ${nonDupAds.length === 0 ? 'disabled' : ''}>افزودن غیر تکراری‌ها (${nonDupAds.length} مورد)</button>
+       </div>`
+    : '<p class="hint" style="margin-top:12px;">هیچ آگهیِ فروشی پیدا نشد.</p>';
+
+  const buyersPart = buyers.length
+    ? `<p class="hint" style="margin-top:14px;">${buyers.length} پیام «خواهان/خریدار» هم پیدا شد:</p>${buyerRows}
+       <button style="margin-top:10px;" id="confirmBuyersBtn">ذخیره در بخش «خواهان» (${buyers.length} مورد)</button>`
+    : '';
+
+  box.innerHTML = `<div id="adsResultBox">${adsPart}</div><div id="buyersResultBox">${buyersPart}</div>`;
+
+  if (ads.length){
+    document.getElementById('confirmSaveBtn').onclick = async () => {
+      if (!db) return;
+      const photoFile = document.getElementById('pastePhotoFile').files[0] || null;
+      const videoFile = document.getElementById('pasteVideoFile').files[0] || null;
+      try {
+        const extra = await uploadListingMedia(photoFile, videoFile);
+        const col = db.collection('listings');
+        await Promise.all(ads.map(ad => col.add({...ad, ...extra, status:null, archived:false, createdAt:new Date().toISOString()})));
+        document.getElementById('pasteBox').value = '';
+        document.getElementById('pastePhotoFile').value = ''; document.getElementById('pasteVideoFile').value = '';
+        document.getElementById('adsResultBox').innerHTML = '<p class="hint" style="margin-top:12px;">ذخیره شد (همه، از جمله تکراری‌ها).</p>' + matchedBuyersSummaryHtml(ads);
+      } catch (e) {
+        alert(e && e.message === 'no-assets' ? 'امکانِ آپلودِ عکس/ویدیو الان در دسترس نیست.' : 'ذخیره نشد — این حساب اجازه‌ی ویرایش این صفحه را ندارد.');
+      }
+    };
+    if (nonDupAds.length){
+      document.getElementById('confirmNonDupBtn').onclick = async () => {
+        if (!db) return;
+        const photoFile = document.getElementById('pastePhotoFile').files[0] || null;
+        const videoFile = document.getElementById('pasteVideoFile').files[0] || null;
+        try {
+          const extra = await uploadListingMedia(photoFile, videoFile);
+          const col = db.collection('listings');
+          await Promise.all(nonDupAds.map(ad => col.add({...ad, ...extra, status:null, archived:false, createdAt:new Date().toISOString()})));
+          document.getElementById('pasteBox').value = '';
+          document.getElementById('pastePhotoFile').value = ''; document.getElementById('pasteVideoFile').value = '';
+          document.getElementById('adsResultBox').innerHTML = `<p class="hint" style="margin-top:12px;">${nonDupAds.length} مورد غیرتکراری ذخیره شد؛ ${ads.length - nonDupAds.length} مورد تکراری نادیده گرفته شد.</p>` + matchedBuyersSummaryHtml(nonDupAds);
+        } catch (e) {
+          alert(e && e.message === 'no-assets' ? 'امکانِ آپلودِ عکس/ویدیو الان در دسترس نیست.' : 'ذخیره نشد — این حساب اجازه‌ی ویرایش این صفحه را ندارد.');
+        }
+      };
+    }
+  }
+
+  if (buyers.length){
+    document.getElementById('confirmBuyersBtn').onclick = async () => {
+      if (!db) return;
+      try {
+        const col = db.collection('buyers');
+        await Promise.all(buyers.map(b => col.add({ text: b.text, phone: b.phone, createdAt: new Date().toISOString() })));
+        document.getElementById('buyersResultBox').innerHTML = '<p class="hint" style="margin-top:12px;">در بخش «خواهان» ذخیره شد.</p>';
+      } catch (e) {
+        alert('ذخیره نشد — این حساب اجازه‌ی ویرایش این صفحه را ندارد.');
+      }
+    };
+  }
+}
+
+async function quickAdd(){
+  if (!db) return;
+  const zone = parseInt(document.getElementById('fZone').value);
+  const block = parseInt(document.getElementById('fBlock').value);
+  const typedPrice = normalizeNumbers(document.getElementById('fPrice').value).trim();
+  const parsed = parsePrice(typedPrice);
+  const price = parsed.price ?? (parseInt(typedPrice) || null);
+  const priceText = parsed.priceText ?? (typedPrice || null);
+  const phone = normalizeNumbers(document.getElementById('fPhone').value).trim() || null;
+  if (!zone || zone<1 || zone>5 || !block){ alert('زون (۱ تا ۵) و بلوک الزامی‌ست.'); return; }
+  const photoFile = document.getElementById('fPhotoFile').files[0] || null;
+  const videoFile = document.getElementById('fVideoFile').files[0] || null;
+  try {
+    const extra = await uploadListingMedia(photoFile, videoFile);
+    await db.collection('listings').add({ zone, block, floor:null, direction:null, price, priceText, phone, ...extra, status:null, archived:false, createdAt:new Date().toISOString() });
+    const matches = findMatchingBuyers({ zone, price });
+    if (matches.length){
+      alert(`🙋 ${matches.length} خواهان شاید به این فایل علاقه داشته باشن:\n` + matches.map(b => (b.phone || 'بدون شماره')).join('\n'));
+    }
+    ['fZone','fBlock','fPrice','fPhone','fPhotoFile','fVideoFile'].forEach(id => document.getElementById(id).value = '');
+  } catch (e) {
+    alert(e && e.message === 'no-assets' ? 'امکانِ آپلودِ عکس/ویدیو الان در دسترس نیست.' : 'ذخیره نشد — این حساب اجازه‌ی ویرایش این صفحه را ندارد.');
+  }
+}
+
+async function archiveListing(id){
+  if (!db) return;
+  if (String(id).startsWith('bale_')){
+    alert('این فایل را سرویسِ خودکارِ بله ثبت کرده و از این صفحه قابلِ آرشیوکردن نیست.');
+    return;
+  }
+  if (savedListingIds.has(id)){
+    alert('این فایل ذخیره شده و قابل آرشیو نیست — اول از «ذخیره‌ها» درش بیار.');
+    return;
+  }
+  try {
+    await db.doc('listings/'+id).update({ archived:true });
+  } catch (e) {
+    alert('آرشیو نشد — این حساب اجازه‌ی ویرایش این صفحه را ندارد.');
+  }
+}
+
+async function updateListingStatus(id, status){
+  if (!db) return;
+  if (String(id).startsWith('bale_')) return; // آگهی‌های خودکارِ بله از این صفحه وضعیتشون تغییر نمی‌کنه
+  try {
+    await db.doc('listings/'+id).update({ status: status || null });
+  } catch (e) {
+    alert('تغییرِ وضعیت ذخیره نشد — این حساب اجازه‌ی ویرایش این صفحه را ندارد.');
+  }
+}
+
+// نشانِ رنگیِ وضعیتِ فایل روی کارت/جزئیات؛ وقتی وضعیتی ثبت نشده (روالِ سابق) هیچ‌چی نشون داده نمی‌شه.
+function statusBadgeHtml(l){
+  if (!l.status) return '';
+  const cls = l.status === 'فروخته شد' ? 'status-sold' : (l.status === 'رزرو شد' ? 'status-reserved' : 'status-negotiating');
+  return `<span class="status-badge ${cls}">${esc(l.status)}</span>`;
+}
+
+function relTime(iso){
+  if (!iso) return '-';
+  const diff = (Date.now() - new Date(iso).getTime())/1000;
+  if (diff < 60) return 'چند لحظه پیش';
+  if (diff < 3600) return Math.floor(diff/60)+' دقیقه پیش';
+  if (diff < 86400) return Math.floor(diff/3600)+' ساعت پیش';
+  return Math.floor(diff/86400)+' روز پیش';
+}
+function esc(v){
+  return String(v ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+// قیمت دقیقاً به همان شکلی که در متن اصلی نوشته شده؛ برای فایل‌های قدیمی که متنِ قیمت ندارند همان عدد.
+function priceShown(l){ return l.priceText || (l.price ? String(l.price) : ''); }
+
+// طبقه‌ی همکف عدد صفر است؛ همه‌جا به‌جای «۰» (که با «نامشخص» قاطی می‌شه) «همکف» نشون داده می‌شه.
+// باگ قبلی: کدهایی مثل `l.floor ? ... : ''` چون 0 در جاوااسکریپت falsy است، طبقه‌ی همکف را
+// اصلاً نشون نمی‌دادند؛ همه‌جا باید از همین تابع (یا چک صریح null/undefined) استفاده شود.
+function floorLabel(floor){
+  if (floor === null || floor === undefined) return null;
+  return floor === 0 ? 'همکف' : String(floor);
+}
+
+// نمایشِ «زون X» برای زون‌های عددیِ فاز ۱۱، و اسمِ خودِ پروژه برای کوهسار/غدیر (دو پروژه‌ی جدا).
+function zoneLabel(zone){
+  if (zone === 'kuhsar') return 'کوهسار';
+  if (zone === 'ghadir') return 'غدیر';
+  return 'زون ' + zone;
+}
+
+// کلید تشخیص «فایل تکراری»: اگر زون/بلوک/طبقه/قیمت/تلفن با هم یکی باشند، همان فایل دوباره وارد شده.
+function dedupKey(l){
+  return [l.zone, l.block, l.floor ?? 'x', l.price ?? 'x', l.phone ?? 'x'].join('|');
+}
+
+// آگهی‌هایی که سرویسِ خودکارِ بله نوشته، توی دیتابیسِ خودِ این صفحه (db) وجود ندارن — پس هیچ
+// دکمه‌ی ویرایش/حذف/تغییرِ وضعیتی نباید روشون کار کنه، فقط نمایشِ (read-only) دارن.
+function isBaleListing(l){
+  return !!(l && l.source === 'bale');
+}
+
+// شمارشِ هر کلیدِ تکراری در یک لیست (برای هشدار موقع پیست و برای جدول مدیریت)
+function countDupKeys(listings){
+  const counts = {};
+  for (const l of listings){ const k = dedupKey(l); counts[k] = (counts[k]||0) + 1; }
+  return counts;
+}
+
+// چند رکوردِ یکسان (تکراری) را به یک «گروه» تبدیل می‌کند: نماینده‌ی گروه قدیمی‌ترین آپلود است
+// (متن اصلی و زمان ثبتش)، و تعداد دفعات آپلود و زمان هر آپلود کنارش نگه داشته می‌شود.
+// هیچ چیزی از دیتابیس حذف نمی‌شود؛ فقط برای نمایش یکی شمرده می‌شوند.
+function buildGroup(docs){
+  const sorted = [...docs].sort((a,b) => (a.createdAt || '').localeCompare(b.createdAt || ''));
+  const first = sorted[0];
+  const withRaw = sorted.find(d => d.raw);
+  const withPriceText = sorted.find(d => d.priceText);
+  const withPhoto = sorted.find(d => d.photoUrl);
+  const withVideo = sorted.find(d => d.videoUrl);
+  const withStatus = [...sorted].reverse().find(d => d.status);
+  return { ...first, raw: withRaw ? withRaw.raw : '', priceText: withPriceText ? withPriceText.priceText : null,
+           photoUrl: withPhoto ? withPhoto.photoUrl : null, videoUrl: withVideo ? withVideo.videoUrl : null,
+           status: withStatus ? withStatus.status : null,
+           uploadCount: sorted.length, uploads: sorted.map(d => d.createdAt) };
+}
+function groupListings(list){
+  const map = new Map();
+  for (const l of list){
+    const k = dedupKey(l);
+    if (!map.has(k)) map.set(k, []);
+    map.get(k).push(l);
+  }
+  return [...map.values()].map(buildGroup);
+}
+
+function listingCardHtml(l){
+  const n = l.uploadCount || 1;
+  const dupBadge = n > 1 ? `<span class="dup-badge">🔁 ${n} بار آپلود شده</span>` : '';
+  const mediaBadge = (l.photoUrl || l.videoUrl)
+    ? `<span class="media-badge">${l.photoUrl ? '📷' : ''}${l.videoUrl ? '🎥' : ''}</span>` : '';
+  const baleBadge = l.source === 'bale' ? `<span class="bale-badge">🤖 بله</span>` : '';
+  const price = priceShown(l);
+  const saved = savedListingIds.has(l.id);
+  return `<div class="u-card" onclick="showDetail('${esc(l.id)}')">
+      <button class="save-btn${saved?' saved':''}" onclick="event.stopPropagation(); toggleSaveListing('${esc(l.id)}')">🔖</button>
+      <div class="u-card-body">
+      <h3>${zoneLabel(l.zone)} · بلوک ${l.block ?? 'نامشخص'} ${dupBadge}${mediaBadge}${baleBadge}${statusBadgeHtml(l)}</h3>
+      <div class="meta">${floorLabel(l.floor)?('طبقه '+floorLabel(l.floor)+' · '):''}${esc(l.direction||'')}</div>
+      ${price ? `<div class="price">💰 ${esc(price)}</div>` : ''}
+      ${l.phone ? `<div class="phone">📞 ${esc(l.phone)}</div>` : ''}
+      <div class="time">${relTime(l.createdAt)}</div></div></div>`;
+}
+
+function showDetail(id){
+  const doc = allListings.find(item => String(item.id) === String(id));
+  if (!doc) return;
+  const same = allListings.filter(d => dedupKey(d) === dedupKey(doc) && (!d.archived || d.id === doc.id));
+  const g = buildGroup(same);
+  const price = priceShown(g);
+  const uploadsHtml = g.uploadCount > 1
+    ? `<div class="dup-note">🔁 این فایل ${g.uploadCount} بار آپلود شده:<ul>${g.uploads.slice(0,12).map(t => `<li>${relTime(t)}</li>`).join('')}</ul></div>` : '';
+  document.getElementById('detailBody').innerHTML = `
+    ${g.photoUrl ? `<img src="${esc(g.photoUrl)}" alt="" style="width:100%;border-radius:12px;margin-bottom:12px;display:block;">` : ''}
+    ${g.videoUrl ? `<video src="${esc(g.videoUrl)}" controls style="width:100%;border-radius:12px;margin-bottom:12px;display:block;"></video>` : ''}
+    <div class="detail-info">
+      <div><b>${zoneLabel(g.zone)} · بلوک ${g.block ?? 'نامشخص'}</b> ${statusBadgeHtml(g)}</div>
+      ${floorLabel(g.floor) ? `<div>طبقه: ${floorLabel(g.floor)}</div>` : ''}
+      ${g.direction ? `<div>جهت: ${esc(g.direction)}</div>` : ''}
+      ${price ? `<div class="price">💰 ${esc(price)}</div>` : ''}
+      ${g.phone ? `<div class="phone"><a href="tel:${esc(g.phone)}">📞 ${esc(g.phone)}</a></div>` : ''}
+    </div>
+    ${uploadsHtml}
+    <div class="detail-label">متن اصلی آگهی (عین آنچه آپلود شده)</div>
+    <pre class="raw-text" id="detailRaw"></pre>
+    <button type="button" class="btn-whatsapp" onclick="shareOnWhatsapp('${esc(g.id)}')">📤 ارسال در واتساپ</button>`;
+  // متن اصلی با textContent گذاشته می‌شود تا هر چیزی داخلش بود به‌صورت متن ساده نمایش داده شود
+  document.getElementById('detailRaw').textContent = g.raw || 'متن اصلیِ این فایل ثبت نشده (قبل از اضافه‌شدن این قابلیت، یا با «افزودن دستی» وارد شده).';
+  document.getElementById('detailModal').classList.remove('hidden');
+}
+function closeDetail(){ document.getElementById('detailModal').classList.add('hidden'); }
+
+// ارسالِ مشخصاتِ فایل در واتساپ — یه پیامِ آماده می‌سازه و واتساپ رو با همون متن باز می‌کنه
+// (بدونِ گیرنده‌ی مشخص، چون این برای فرستادن برای مشتریه نه برای خودِ آگهی‌دهنده).
+function shareOnWhatsapp(id){
+  const doc = allListings.find(item => String(item.id) === String(id));
+  if (!doc) return;
+  const same = allListings.filter(d => dedupKey(d) === dedupKey(doc) && (!d.archived || d.id === doc.id));
+  const g = buildGroup(same);
+  const price = priceShown(g);
+  const lines = [
+    `${zoneLabel(g.zone)} · بلوک ${g.block ?? 'نامشخص'}`,
+    floorLabel(g.floor) ? `طبقه: ${floorLabel(g.floor)}` : null,
+    g.direction ? `جهت: ${g.direction}` : null,
+    price ? `قیمت: ${price}` : null,
+    g.status ? `وضعیت: ${g.status}` : null,
+    g.phone ? `تماس: ${g.phone}` : null,
+  ].filter(Boolean);
+  window.open('https://wa.me/?text=' + encodeURIComponent(lines.join('\n')), '_blank');
+}
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeDetail(); });
+
+// ---------------------------------------------------------------------
+// بخش «خواهان» — پیام‌هایی که extractBuyerRequests تشخیص داده و
+// ادمین ذخیره‌شان کرده؛ کاملاً جدا از کالکشن listings، پس نظم اصلی برنامه دست‌نخورده می‌ماند.
+// ---------------------------------------------------------------------
+
+function buyerSnippet(text){
+  const firstLine = (text || '').split('\n').find(l => l.trim()) || '';
+  return firstLine.length > 60 ? firstLine.slice(0, 60) + '…' : firstLine;
+}
+
+function buyerCardHtml(b){
+  const saved = savedBuyerIds.has(b.id);
+  return `<div class="u-card" onclick="showBuyerDetail('${esc(b.id)}')">
+      <button class="save-btn${saved?' saved':''}" onclick="event.stopPropagation(); toggleSaveBuyer('${esc(b.id)}')">🔖</button>
+      <div class="u-card-body">
+      <h3>${b.phone ? esc(b.phone) : 'بدون شماره تماس'}</h3>
+      <div class="meta">${esc(buyerSnippet(b.text))}</div>
+      <div class="time">${relTime(b.createdAt)}</div></div></div>`;
+}
+
+function renderBuyers(){
+  const list = document.getElementById('buyersList');
+  if (!list) return;
+  const sorted = [...allBuyers].sort((a,b) => (b.createdAt||'').localeCompare(a.createdAt||''));
+  list.innerHTML = sorted.length ? sorted.map(buyerCardHtml).join('')
+    : '<div class="empty">هنوز درخواستی ثبت نشده.</div>';
+}
+
+function showBuyerDetail(id){
+  const b = allBuyers.find(item => String(item.id) === String(id));
+  if (!b) return;
+  document.getElementById('detailBody').innerHTML = `
+    <div class="detail-info">
+      <div><b>خواهان</b></div>
+      ${b.phone ? `<div class="phone"><a href="tel:${esc(b.phone)}">📞 ${esc(b.phone)}</a></div>` : ''}
+    </div>
+    <div class="detail-label">متن اصلی پیام (عین آنچه پیست شده)</div>
+    <pre class="raw-text" id="detailRaw"></pre>`;
+  document.getElementById('detailRaw').textContent = b.text || '';
+  document.getElementById('detailModal').classList.remove('hidden');
+}
+
+const TABLE_PAGE_SIZE = 50;
+let adminPage = 1;
+
+function goToAdminPage(p){ adminPage = p; render(); }
+
+// ---------------------------------------------------------------------
+// بخش «تکراری‌ها»: پرونده‌های فعالی که بیش از یک‌بار آپلود شده‌اند را گروه‌بندی
+// نشون می‌ده تا با انتخاب دستی، راحت به آرشیو منتقل شن — چیزی حذف نمی‌شه، فقط آرشیو.
+// ---------------------------------------------------------------------
+let dupSelectMode = false;
+let dupSelected = new Set();
+let currentDupIds = [];   // هر بار renderDuplicates پر می‌شه؛ «انتخاب همه» دقیقاً همین‌ها رو انتخاب می‌کنه
+
+function toggleDupSelectMode(){
+  dupSelectMode = !dupSelectMode;
+  if (!dupSelectMode) dupSelected.clear();
+  render();
+}
+
+function toggleDupItem(id){
+  if (savedListingIds.has(id)) return; // ذخیره‌شده‌ها قابل انتخاب برای آرشیو نیستن
+  if (String(id).startsWith('bale_')) return; // آگهی‌های خودکارِ بله از این صفحه آرشیو نمی‌شن
+  if (dupSelected.has(id)) dupSelected.delete(id); else dupSelected.add(id);
+  render();
+}
+
+function toggleDupSelectAll(){
+  // ذخیره‌شده‌ها و آگهی‌های خودکارِ بله از «انتخاب همه» کنار گذاشته می‌شن
+  const selectable = currentDupIds.filter(id => !savedListingIds.has(id) && !String(id).startsWith('bale_'));
+  if (selectable.length > 0 && selectable.every(id => dupSelected.has(id)) && dupSelected.size === selectable.length){
+    dupSelected.clear();
+  } else {
+    dupSelected = new Set(selectable);
+  }
+  render();
+}
+
+async function archiveDupSelected(){
+  if (!db || dupSelected.size === 0) return;
+  const allIds = [...dupSelected];
+  // قانون جدید: فایل‌های ذخیره‌شده و آگهی‌های خودکارِ بله از انتخابِ گروهی هم مستثنا هستند — آرشیو نمی‌شن.
+  const ids = allIds.filter(id => !savedListingIds.has(id) && !String(id).startsWith('bale_'));
+  const skipped = allIds.length - ids.length;
+  if (!ids.length){
+    alert('همه‌ی موارد انتخاب‌شده ذخیره شده‌اند — اول از «ذخیره‌ها» درشون بیار.');
+    return;
+  }
+  try {
+    await Promise.all(ids.map(id => db.doc('listings/'+id).update({ archived: true })));
+    dupSelected.clear();
+    dupSelectMode = false;
+    if (skipped) alert(`${skipped} مورد چون ذخیره شده بود، آرشیو نشد.`);
+  } catch (e) {
+    alert('انتقال به آرشیو ناموفق بود — این حساب اجازه‌ی ویرایش این صفحه را ندارد.');
+  }
+}
+
+function renderDuplicates(){
+  const listEl = document.getElementById('dupList');
+  const selectBtn = document.getElementById('dupSelectBtn');
+  const selectAllBtn = document.getElementById('dupSelectAllBtn');
+  const archiveBtn = document.getElementById('dupArchiveBtn');
+  if (!listEl) return;
+
+  selectBtn.textContent = dupSelectMode ? 'لغو انتخاب' : 'انتخاب';
+
+  const active = allListings.filter(l => !l.archived);
+  const counts = countDupKeys(active);
+
+  // پاک‌سازی انتخاب‌های قدیمی که دیگه در گروه تکراری نیستن (مثلاً بعد از آرشیو شدن) یا تازه ذخیره شدن
+  for (const id of [...dupSelected]){
+    const still = active.find(l => l.id === id);
+    if (!still || counts[dedupKey(still)] <= 1 || savedListingIds.has(id)) dupSelected.delete(id);
+  }
+
+  const groups = new Map();
+  for (const l of active){
+    const k = dedupKey(l);
+    if (counts[k] > 1){
+      if (!groups.has(k)) groups.set(k, []);
+      groups.get(k).push(l);
+    }
+  }
+
+  if (groups.size === 0){
+    listEl.innerHTML = '<div class="empty">فایل تکراری‌ای پیدا نشد.</div>';
+    archiveBtn.style.display = 'none';
+    selectAllBtn.style.display = 'none';
+    currentDupIds = [];
+    document.getElementById('dupSelCount').textContent = '0';
+    return;
+  }
+
+  let html = '';
+  for (const docs of groups.values()){
+    const sorted = [...docs].sort((a,b) => (a.createdAt||'').localeCompare(b.createdAt||''));
+    const rep = sorted[0];
+    html += `<div class="manage-group-label">${zoneLabel(rep.zone)} · بلوک ${rep.block ?? 'نامشخص'}${floorLabel(rep.floor)?' · طبقه '+floorLabel(rep.floor):''} — ${sorted.length} نسخه</div>`;
+    html += sorted.map(l => {
+      const isSaved = savedListingIds.has(l.id);
+      const bale = isBaleListing(l);
+      return `
+      <label class="manage-row">
+        ${dupSelectMode ? `<input type="checkbox" ${dupSelected.has(l.id)?'checked':''} ${(isSaved||bale)?'disabled':''} onchange="toggleDupItem('${esc(l.id)}')">` : ''}
+        <div class="manage-info">
+          <div>${esc(priceShown(l)) || '—'}${l.phone ? ' · ' + esc(l.phone) : ''}${isSaved ? ' · 🔖 ذخیره‌شده' : ''}${bale ? ' · 🤖 بله' : ''}</div>
+          <div class="manage-time">${relTime(l.createdAt)}</div>
+        </div>
+      </label>`;
+    }).join('');
+  }
+  listEl.innerHTML = html;
+  currentDupIds = [...groups.values()].flat().map(l => l.id);
+  archiveBtn.style.display = dupSelectMode ? 'inline-block' : 'none';
+  archiveBtn.disabled = dupSelected.size === 0;
+  selectAllBtn.style.display = dupSelectMode ? 'inline-block' : 'none';
+  const selectable = currentDupIds.filter(id => !savedListingIds.has(id) && !String(id).startsWith('bale_'));
+  selectAllBtn.textContent = (selectable.length > 0 && selectable.every(id => dupSelected.has(id)) && dupSelected.size === selectable.length) ? 'لغو انتخاب همه' : 'انتخاب همه';
+  document.getElementById('dupSelCount').textContent = dupSelected.size;
+}
+
+// ---------------------------------------------------------------------
+// بخش «آرشیو»: پرونده‌های آرشیوشده را نشون می‌ده تا با انتخاب دستی، برای همیشه
+// حذفشون کنیم و حجم دیتابیس خلوت بمونه — این یکی برگشت‌ناپذیره.
+// ---------------------------------------------------------------------
+let archiveSelected = new Set();
+
+function toggleArchiveSelectAll(){
+  // ذخیره‌شده‌ها از «انتخاب همه» کنار گذاشته می‌شن (ممکنه فایلی قبل از ذخیره شدن آرشیو شده باشه)
+  const archived = allListings.filter(l => l.archived && !savedListingIds.has(l.id));
+  if (archived.length > 0 && archiveSelected.size === archived.length){
+    archiveSelected.clear();
+  } else {
+    archiveSelected = new Set(archived.map(l => l.id));
+  }
+  render();
+}
+
+function toggleArchiveItem(id){
+  if (savedListingIds.has(id)) return; // ذخیره‌شده‌ها قابل انتخاب برای حذف نیستن
+  if (archiveSelected.has(id)) archiveSelected.delete(id); else archiveSelected.add(id);
+  render();
+}
+
+async function deleteArchiveSelected(){
+  if (!db || archiveSelected.size === 0) return;
+  const allIds = [...archiveSelected];
+  // قانون جدید: فایل‌های ذخیره‌شده از حذفِ گروهیِ آرشیو هم مستثنا هستند.
+  const ids = allIds.filter(id => !savedListingIds.has(id));
+  const skipped = allIds.length - ids.length;
+  if (!ids.length){
+    alert('همه‌ی موارد انتخاب‌شده ذخیره شده‌اند — اول از «ذخیره‌ها» درشون بیار.');
+    return;
+  }
+  if (!confirm('حذف همیشگی قابل بازگشت نیست. مطمئنی؟')) return;
+  try {
+    await Promise.all(ids.map(id => db.doc('listings/'+id).delete()));
+    archiveSelected.clear();
+    if (skipped) alert(`${skipped} مورد چون ذخیره شده بود، حذف نشد.`);
+  } catch (e) {
+    alert('حذف ناموفق بود — این حساب اجازه‌ی ویرایش این صفحه را ندارد.');
+  }
+}
+
+function renderArchive(){
+  const listEl = document.getElementById('archiveList');
+  const selectAllBtn = document.getElementById('archiveSelectAllBtn');
+  const deleteBtn = document.getElementById('archiveDeleteBtn');
+  if (!listEl) return;
+
+  const archived = [...allListings].filter(l => l.archived).sort((a,b) => (b.createdAt||'').localeCompare(a.createdAt||''));
+
+  // پاک‌سازی انتخاب‌های قدیمی که دیگه آرشیو نیستن (مثلاً حذف یا برگردونده‌شدن) یا تازه ذخیره شدن
+  for (const id of [...archiveSelected]){ if (!archived.some(l => l.id === id) || savedListingIds.has(id)) archiveSelected.delete(id); }
+
+  if (archived.length === 0){
+    listEl.innerHTML = '<div class="empty">فایل آرشیوشده‌ای وجود ندارد.</div>';
+    deleteBtn.style.display = 'none';
+    document.getElementById('archiveSelCount').textContent = '0';
+    selectAllBtn.textContent = 'انتخاب همه';
+    return;
+  }
+
+  listEl.innerHTML = archived.map(l => {
+    const isSaved = savedListingIds.has(l.id);
+    return `
+    <label class="manage-row">
+      <input type="checkbox" ${archiveSelected.has(l.id)?'checked':''} ${isSaved?'disabled':''} onchange="toggleArchiveItem('${esc(l.id)}')">
+      <div class="manage-info">
+        <div>${zoneLabel(l.zone)} · بلوک ${l.block ?? 'نامشخص'}${floorLabel(l.floor)?' · طبقه '+floorLabel(l.floor):''} — ${esc(priceShown(l)) || '—'}${l.phone ? ' · ' + esc(l.phone) : ''}${isSaved ? ' · 🔖 ذخیره‌شده' : ''}</div>
+        <div class="manage-time">${relTime(l.createdAt)}</div>
+      </div>
+    </label>`;
+  }).join('');
+  deleteBtn.style.display = 'inline-block';
+  deleteBtn.disabled = archiveSelected.size === 0;
+  document.getElementById('archiveSelCount').textContent = archiveSelected.size;
+  const selectableCount = archived.filter(l => !savedListingIds.has(l.id)).length;
+  selectAllBtn.textContent = (selectableCount > 0 && archiveSelected.size === selectableCount) ? 'لغو انتخاب همه' : 'انتخاب همه';
+}
+
+function render(){
+  const active = allListings.filter(l=>!l.archived);
+  // اکسپلور فقط مالِ ۵ زونِ فاز ۱۱ است؛ کوهسار و غدیر هرکدوم بخشِ مخصوصِ خودشون رو دارن (renderGhadir).
+  const visible = groupListings(active).filter(l => l.zone !== 'ghadir' && l.zone !== 'kuhsar' && (!zoneFilter || String(l.zone) === zoneFilter) && matchesSearch(l) && inPriceRange(l));
+  // ترتیب اکسپلور طبق دکمه‌ی فعال: بلوک (پیش‌فرض، زون سپس شماره بلوک)، قیمت (ارزان به گران) یا زمان (جدیدترین اول)
+  let sorted;
+  if (sortMode === 'price'){
+    sorted = [...visible].sort((a,b) => (a.price ?? Infinity) - (b.price ?? Infinity));
+  } else if (sortMode === 'time'){
+    sorted = [...visible].sort((a,b) => (b.createdAt||'').localeCompare(a.createdAt||''));
+  } else {
+    sorted = [...visible].sort((a,b) => a.zone - b.zone || (a.block ?? Infinity) - (b.block ?? Infinity));
+  }
+
+  const uList = document.getElementById('uList');
+  uList.innerHTML = sorted.length ? sorted.map(listingCardHtml).join('')
+    : '<div class="empty">فایلی برای این فیلتر ثبت نشده.</div>';
+
+  if (canEdit){
+    const tbody = document.getElementById('tbody');
+    const dupCounts = countDupKeys(active);
+    // جدیدترین‌ها بالای جدول؛ صفحه‌بندی می‌شود تا با هزاران ردیف هم جدول شلوغ نشود
+    const tableSorted = [...active].sort((a,b) => (b.createdAt||'').localeCompare(a.createdAt||''));
+    const totalPages = Math.max(1, Math.ceil(tableSorted.length / TABLE_PAGE_SIZE));
+    if (adminPage > totalPages) adminPage = totalPages;
+    if (adminPage < 1) adminPage = 1;
+    const pageStart = (adminPage - 1) * TABLE_PAGE_SIZE;
+    const pageItems = tableSorted.slice(pageStart, pageStart + TABLE_PAGE_SIZE);
+
+    tbody.innerHTML = pageItems.length ? pageItems.map(l => {
+      const bale = isBaleListing(l);
+      const statusCell = bale
+        ? `<span class="bale-badge">🤖 خودکار (بله)</span>`
+        : `<select class="mini-select" onchange="updateListingStatus('${esc(l.id)}', this.value)">${STATUS_OPTIONS.map(s => `<option value="${esc(s)}" ${l.status===s || (!l.status && !s) ? 'selected' : ''}>${s || 'بدونِ وضعیت'}</option>`).join('')}</select>`;
+      const actionsCell = `<button class="mini" onclick="showDetail('${esc(l.id)}')">متن</button>` + (bale ? '' : ` <button class="mini" onclick="archiveListing('${esc(l.id)}')">آرشیو</button>`);
+      return `<tr><td>${zoneLabel(l.zone)} / ${l.block ?? 'نامشخص'}${dupCounts[dedupKey(l)] > 1 ? ` <span class="dup-badge">×${dupCounts[dedupKey(l)]}</span>` : ''}</td><td dir="ltr" style="text-align:right;">${esc(priceShown(l)) || '—'}</td><td>${statusCell}</td>
+      <td>${relTime(l.createdAt)}</td><td>${actionsCell}</td></tr>`;
+    }).join('')
+      : '<tr><td colspan="5">هنوز فایلی ثبت نشده.</td></tr>';
+
+    const pagerEl = document.getElementById('tablePager');
+    if (pagerEl){
+      if (tableSorted.length > TABLE_PAGE_SIZE){
+        const rangeStart = tableSorted.length ? pageStart + 1 : 0;
+        const rangeEnd = Math.min(pageStart + TABLE_PAGE_SIZE, tableSorted.length);
+        pagerEl.innerHTML = `
+          <span class="pager-info">نمایش ${rangeStart} تا ${rangeEnd} از ${tableSorted.length} فایل</span>
+          <div class="pager-btns">
+            <button ${adminPage<=1?'disabled':''} onclick="goToAdminPage(${adminPage-1})">قبلی ‹</button>
+            <span class="pager-info">صفحه ${adminPage} از ${totalPages}</span>
+            <button ${adminPage>=totalPages?'disabled':''} onclick="goToAdminPage(${adminPage+1})">› بعدی</button>
+          </div>`;
+      } else {
+        pagerEl.innerHTML = '';
+      }
+    }
+
+    document.getElementById('statActive').textContent = active.length;
+    document.getElementById('statArchived').textContent = allListings.length - active.length;
+    const todayStr = new Date().toDateString();
+    document.getElementById('statToday').textContent = active.filter(l => l.createdAt && new Date(l.createdAt).toDateString()===todayStr).length;
+    const priced = active.map(l=>l.price).filter(Boolean);
+    document.getElementById('statAvg').textContent = priced.length ? Math.round(priced.reduce((a,b)=>a+b,0)/priced.length) : '—';
+
+    renderDuplicates();
+    renderArchive();
+  }
+
+  renderManual();
+  renderSaved();
+  renderGhadir();
+}
+
+// جستجوی مخصوصِ بخشِ «کوهسار و غدیر» — مستقل از جستجوی اکسپلور، چون پنلِ جداییه.
+function matchesGhadirSearch(l){
+  if (!ghadirSearchQuery) return true;
+  const haystack = [l.block, floorLabel(l.floor) || '', l.direction || '', l.phone || '', l.priceText || '', l.price || '']
+    .join(' ');
+  return haystack.includes(ghadirSearchQuery);
+}
+
+function onGhadirSearchInput(value){
+  ghadirSearchQuery = normalizeNumbers(value || '').trim();
+  renderGhadir();
+}
+
+// همون رفتارِ اکسپلور، فقط محدود به آگهی‌هایی که zone با پروژه‌ی انتخاب‌شده (ghadirAreaFilter)
+// یکی باشه (قوانینِ تکراری/ذخیره/حذفِ خودکار و... چون روی خودِ l.archived و l.createdAt کار
+// می‌کنن، عیناً این‌جا هم حفظ می‌شن). کوهسار و غدیر همیشه جدا از هم نشون داده می‌شن، هیچ‌وقت قاطی.
+function renderGhadir(){
+  const listEl = document.getElementById('ghadirList');
+  if (!listEl) return;
+  const active = allListings.filter(l => !l.archived && l.zone === ghadirAreaFilter);
+  const visible = groupListings(active).filter(l => matchesGhadirSearch(l) && inGhadirPriceRange(l));
+  let sorted;
+  if (ghadirSortMode === 'price'){
+    sorted = [...visible].sort((a,b) => (a.price ?? Infinity) - (b.price ?? Infinity));
+  } else if (ghadirSortMode === 'time'){
+    sorted = [...visible].sort((a,b) => (b.createdAt||'').localeCompare(a.createdAt||''));
+  } else {
+    sorted = [...visible].sort((a,b) => (a.block ?? Infinity) - (b.block ?? Infinity));
+  }
+  listEl.innerHTML = sorted.length ? sorted.map(listingCardHtml).join('')
+    : `<div class="empty">فایلی در ${zoneLabel(ghadirAreaFilter)} ثبت نشده.</div>`;
+}
+
+
+// =======================================================================
+// «نقشه»: نمایشِ عمومی (پنلِ کاربر) — انتخابِ مدلِ نقشه + زوم/جابه‌جاییِ تصویر
+// =======================================================================
+
+// اگه هیچ نقشه‌ای ثبت نشده، فقط پیامِ خالی؛ اگه یکی هست مستقیم همونو نشون بده؛ اگه چندتاست
+// یه ردیف دکمه (مثلِ فیلترهای زون) برای جابه‌جایی بینِ مدل‌های نقشه هم اضافه می‌شه.
+function renderMapPanel(){
+  const chipsEl = document.getElementById('mapTypeChips');
+  const emptyEl = document.getElementById('mapEmpty');
+  const wrapEl = document.getElementById('mapViewerWrap');
+  if (!chipsEl) return;
+
+  if (!maps.length){
+    chipsEl.classList.add('hidden'); chipsEl.innerHTML = '';
+    wrapEl.classList.add('hidden');
+    emptyEl.classList.remove('hidden');
+    return;
+  }
+  emptyEl.classList.add('hidden');
+  wrapEl.classList.remove('hidden');
+
+  if (!selectedMapId || !maps.some(m => m.id === selectedMapId)) selectedMapId = maps[0].id;
+
+  if (maps.length > 1){
+    chipsEl.classList.remove('hidden');
+    chipsEl.innerHTML = maps.map(m => `<div class="chip${m.id===selectedMapId?' on':''}" data-map="${esc(m.id)}">${esc(m.name)}</div>`).join('');
+  } else {
+    chipsEl.classList.add('hidden'); chipsEl.innerHTML = '';
+  }
+
+  const m = maps.find(x => x.id === selectedMapId);
+  const img = document.getElementById('mapImage');
+  if (m && img.dataset.mapId !== m.id){
+    img.src = m.url; img.dataset.mapId = m.id;
+    mapResetView();
+  }
+}
+
+document.getElementById('mapTypeChips').addEventListener('click', (e) => {
+  const chip = e.target.closest('.chip'); if (!chip) return;
+  selectedMapId = chip.dataset.map;
+  renderMapPanel();
+});
+
+// ---------- زوم/جابه‌جاییِ نقشه: ماوس (چرخ+درگ)، لمس (درگِ تک‌انگشتی + پینچِ دوانگشتی)، دابل‌کلیک ----------
+function mapApplyTransform(){
+  const img = document.getElementById('mapImage');
+  if (!img) return;
+  img.style.transform = `translate(-50%,-50%) translate(${mapView.x}px, ${mapView.y}px) scale(${mapView.scale})`;
+}
+function mapResetView(){
+  mapView = { scale: 1, x: 0, y: 0 };
+  mapApplyTransform();
+}
+// زوم حولِ یه نقطه‌ی مشخص از ویوپورت (مثلاً زیرِ نشانگرِ ماوس یا وسطِ دو انگشت)، نه صرفاً وسطِ تصویر —
+// همون رفتاری که کاربر از یه نقشه‌ی آنلاینِ معمولی انتظار داره.
+function mapZoomAt(factor, px, py){
+  const viewport = document.getElementById('mapViewport');
+  if (!viewport) return;
+  const rect = viewport.getBoundingClientRect();
+  const cx = (px ?? (rect.left + rect.width/2)) - rect.left - rect.width/2;
+  const cy = (py ?? (rect.top + rect.height/2)) - rect.top - rect.height/2;
+  const newScale = Math.min(MAP_MAX_SCALE, Math.max(MAP_MIN_SCALE, mapView.scale * factor));
+  const actualFactor = newScale / mapView.scale;
+  mapView.x = cx - (cx - mapView.x) * actualFactor;
+  mapView.y = cy - (cy - mapView.y) * actualFactor;
+  mapView.scale = newScale;
+  if (mapView.scale <= MAP_MIN_SCALE){ mapView.x = 0; mapView.y = 0; }
+  mapApplyTransform();
+}
+function mapZoomBy(factor){ mapZoomAt(factor); }
+
+(function setupMapGestures(){
+  const viewport = document.getElementById('mapViewport');
+  if (!viewport) return;
+  const pointers = new Map();
+  let dragging = false, lastX = 0, lastY = 0;
+  let pinchStartDist = 0, pinchStartScale = 1;
+
+  function dist(a, b){ return Math.hypot(a.x - b.x, a.y - b.y); }
+  function mid(a, b){ return { x: (a.x+b.x)/2, y: (a.y+b.y)/2 }; }
+
+  viewport.addEventListener('wheel', (e) => {
+    e.preventDefault();
+    const factor = e.deltaY < 0 ? 1.15 : 1/1.15;
+    mapZoomAt(factor, e.clientX, e.clientY);
+  }, { passive: false });
+
+  viewport.addEventListener('pointerdown', (e) => {
+    viewport.setPointerCapture(e.pointerId);
+    pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    if (pointers.size === 1){
+      dragging = true; lastX = e.clientX; lastY = e.clientY;
+      viewport.classList.add('dragging');
+    } else if (pointers.size === 2){
+      dragging = false;
+      const [a, b] = [...pointers.values()];
+      pinchStartDist = dist(a, b) || 1;
+      pinchStartScale = mapView.scale;
+    }
+  });
+
+  viewport.addEventListener('pointermove', (e) => {
+    if (!pointers.has(e.pointerId)) return;
+    pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    if (pointers.size === 2){
+      const [a, b] = [...pointers.values()];
+      const d = dist(a, b) || 1;
+      const targetScale = Math.min(MAP_MAX_SCALE, Math.max(MAP_MIN_SCALE, pinchStartScale * (d / pinchStartDist)));
+      const factor = targetScale / mapView.scale;
+      const m = mid(a, b);
+      mapZoomAt(factor, m.x, m.y);
+    } else if (dragging && mapView.scale > MAP_MIN_SCALE){
+      mapView.x += e.clientX - lastX;
+      mapView.y += e.clientY - lastY;
+      lastX = e.clientX; lastY = e.clientY;
+      mapApplyTransform();
+    } else if (dragging){
+      lastX = e.clientX; lastY = e.clientY;
+    }
+  });
+
+  function endPointer(e){
+    pointers.delete(e.pointerId);
+    if (pointers.size < 2){ pinchStartDist = 0; }
+    if (pointers.size === 0){ dragging = false; viewport.classList.remove('dragging'); }
+  }
+  viewport.addEventListener('pointerup', endPointer);
+  viewport.addEventListener('pointercancel', endPointer);
+  viewport.addEventListener('pointerleave', endPointer);
+
+  viewport.addEventListener('dblclick', (e) => {
+    mapZoomAt(mapView.scale > MAP_MIN_SCALE + 0.2 ? (MAP_MIN_SCALE/mapView.scale) : 2.4, e.clientX, e.clientY);
+  });
+})();
+
+function mapToggleFullscreen(){
+  const wrap = document.getElementById('mapViewerWrap');
+  if (!wrap) return;
+  if (document.fullscreenElement){
+    document.exitFullscreen().catch(() => {});
+  } else if (wrap.requestFullscreen){
+    wrap.requestFullscreen().catch(() => {});
+  }
+}
+
+// =======================================================================
+// «نقشه»: مدیریت (پنلِ ادمین) — آپلود و حذفِ مدل‌های نقشه
+// =======================================================================
+function renderMapAdminList(){
+  const el = document.getElementById('mapAdminList');
+  if (!el) return;
+  el.innerHTML = maps.length ? maps.map(m => `
+    <div class="manage-row">
+      <div class="manage-info"><b>${esc(m.name)}</b><div class="manage-time">${relTime(m.createdAt)}</div></div>
+      <button class="mini" onclick="deleteMapEntry('${esc(m.id)}')">حذف</button>
+    </div>`).join('') : '<p class="hint">هنوز نقشه‌ای آپلود نشده.</p>';
+}
+
+async function uploadMapImage(){
+  const fileInput = document.getElementById('mapUploadFile');
+  const nameInput = document.getElementById('mapUploadName');
+  const statusEl = document.getElementById('mapUploadStatus');
+  const file = fileInput.files && fileInput.files[0];
+  const name = (nameInput.value || '').trim();
+  if (!file){ alert('اول یه تصویرِ نقشه انتخاب کن.'); return; }
+  if (!name){ alert('یه اسم برای این نقشه بذار (مثلاً «نقشه‌ی کلیِ فاز ۱۱» یا «نقشه‌ی کوهسار»).'); return; }
+  if (!assetsApi){ alert('امکانِ آپلود الان در دسترس نیست.'); return; }
+  statusEl.textContent = 'در حالِ آپلود…';
+  try {
+    const result = await assetsApi.upload(file);
+    await db.collection('maps').add({ name, assetId: result.id, url: result.url, createdAt: new Date().toISOString() });
+    fileInput.value = ''; nameInput.value = '';
+    statusEl.textContent = 'نقشه ذخیره شد.';
+  } catch (e) {
+    statusEl.textContent = 'آپلود ناموفق بود — دوباره امتحان کن.';
+  }
+}
+
+async function deleteMapEntry(id){
+  const m = maps.find(x => x.id === id);
+  if (!m) return;
+  if (!confirm(`نقشه‌ی «${m.name}» حذف بشه؟`)) return;
+  try { if (assetsApi) await assetsApi.delete(m.assetId); } catch (e) {}
+  await db.doc('maps/' + id).delete().catch(() => {});
+}
+
+// =======================================================================
+// عکس/ویدیوی فایل: ضمیمه‌ی اختیاریه که مستقیم روی خودِ رکوردِ listings می‌شینه
+// (نه مجموعه‌ی جدا) — از طریقِ assets (دقیقاً مثلِ نقشه) آپلود می‌شه. اگه فایلی
+// انتخاب نشده باشه، هیچ‌چی عوض نمی‌شه و رفتارِ سابقِ فایل‌های بدونِ عکس دست‌نخورده می‌مونه.
+// =======================================================================
+async function uploadListingMedia(photoFile, videoFile){
+  const extra = {};
+  if (photoFile){
+    if (!assetsApi) throw new Error('no-assets');
+    const r = await assetsApi.upload(photoFile);
+    extra.photoAssetId = r.id; extra.photoUrl = r.url;
+  }
+  if (videoFile){
+    if (!assetsApi) throw new Error('no-assets');
+    const r = await assetsApi.upload(videoFile);
+    extra.videoAssetId = r.id; extra.videoUrl = r.url;
+  }
+  return extra;
+}
+
+document.getElementById('filters').addEventListener('click', (e) => {
+  const chip = e.target.closest('.chip'); if (!chip) return;
+  document.querySelectorAll('#filters .chip').forEach(c=>c.classList.remove('on'));
+  chip.classList.add('on'); zoneFilter = chip.dataset.zone; render();
+});
+
+document.getElementById('sortFilters').addEventListener('click', (e) => {
+  const chip = e.target.closest('.chip'); if (!chip) return;
+  document.querySelectorAll('#sortFilters .chip').forEach(c=>c.classList.remove('on'));
+  chip.classList.add('on'); sortMode = chip.dataset.sort; render();
+});
+
+document.getElementById('ghadirAreaFilters').addEventListener('click', (e) => {
+  const chip = e.target.closest('.chip'); if (!chip) return;
+  document.querySelectorAll('#ghadirAreaFilters .chip').forEach(c=>c.classList.remove('on'));
+  chip.classList.add('on'); ghadirAreaFilter = chip.dataset.area; renderGhadir();
+});
+
+document.getElementById('ghadirSortFilters').addEventListener('click', (e) => {
+  const chip = e.target.closest('.chip'); if (!chip) return;
+  document.querySelectorAll('#ghadirSortFilters .chip').forEach(c=>c.classList.remove('on'));
+  chip.classList.add('on'); ghadirSortMode = chip.dataset.sort; renderGhadir();
+});
+
+function setMode(m){
+  document.body.classList.toggle('show-admin', m==='admin');
+  document.getElementById('btnUser').classList.toggle('active', m==='user');
+  document.getElementById('btnAdmin').classList.toggle('active', m==='admin');
+}
+
+// علاوه بر هر بار که لیست فایل‌ها آپدیت می‌شه (در init)، اینجا هم هر دقیقه چک می‌کنیم —
+// همین باعث می‌شه حتی اگه هیچ فایل جدیدی هم ثبت نشه، درست سرِ نیمه‌شب پاک‌سازی انجام بشه.
+let lastCleanupCheckMinute = null;
+function tickClock(){
+  const now = new Date();
+  // ساعتِ دیجیتالِ سبز: اعدادِ انگلیسی، HH:MM:SS — برای همین از en-US با hour12:false استفاده می‌کنیم
+  // (نه fa-IR که اعدادِ فارسی می‌ده)، چون نوعِ دیتا (زمانِ تهران) دست‌نخورده می‌مونه، فقط نمایشش انگلیسیه.
+  const timeFmt = new Intl.DateTimeFormat('en-US', {timeZone:'Asia/Tehran', hour12:false, hour:'2-digit', minute:'2-digit', second:'2-digit'});
+  document.getElementById('clockTime').textContent = timeFmt.format(now);
+  // تاریخ همون دیتای قبلی (شمسی) رو نگه می‌داره، فقط دیزاینش با ساعتِ دیجیتالِ بالاش هماهنگ شده.
+  const dateFmt = new Intl.DateTimeFormat('fa-IR-u-ca-persian', {timeZone:'Asia/Tehran', dateStyle:'full'});
+  document.getElementById('clockDate').textContent = dateFmt.format(now);
+  checkAlarms();
+  const minuteKey = Math.floor(Date.now() / 60000);
+  if (minuteKey !== lastCleanupCheckMinute){
+    lastCleanupCheckMinute = minuteKey;
+    runAutoCleanup();
+  }
+}
+
+// --------------------------------------------------------------------
+// آگهی‌های خودکارِ «بله»: سرویسِ جداگانه (بیرونِ Claude) هر چند دقیقه پیام‌های گروه‌های بله رو
+// می‌خونه و توی یه Firestoreِ جداگانه (پروژه‌ی pardis-b) ذخیره می‌کنه. اینجا فقط آدرسِ عمومی
+// (project id) لازمه، چون قانونِ Firestore اجازه‌ی خوندنِ عمومی داده (رمز/کلیدی لازم نیست).
+// --------------------------------------------------------------------
+const BALE_FIRESTORE_PROJECT = 'pardis-b';
+
+function fsValueToJs(v){
+  if (!v) return null;
+  if ('stringValue' in v) return v.stringValue;
+  if ('integerValue' in v) return parseInt(v.integerValue, 10);
+  if ('doubleValue' in v) return v.doubleValue;
+  if ('booleanValue' in v) return v.booleanValue;
+  if ('nullValue' in v) return null;
+  if ('timestampValue' in v) return v.timestampValue;
+  if ('mapValue' in v) return fsFieldsToObj(v.mapValue.fields || {});
+  if ('arrayValue' in v) return (v.arrayValue.values || []).map(fsValueToJs);
+  return null;
+}
+function fsFieldsToObj(fields){
+  const obj = {};
+  for (const k in fields) obj[k] = fsValueToJs(fields[k]);
+  return obj;
+}
+
+async function fetchBaleListings(){
+  try {
+    let docs = []; let pageToken = '';
+    for (let i = 0; i < 10; i++){ // حداکثر ۱۰ صفحه (۳۰۰۰ آگهی) — بیشتر از این لازم نمی‌شه
+      const url = `https://firestore.googleapis.com/v1/projects/${BALE_FIRESTORE_PROJECT}/databases/(default)/documents/bale_listings?pageSize=300`
+        + (pageToken ? `&pageToken=${encodeURIComponent(pageToken)}` : '');
+      const res = await fetch(url);
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      const data = await res.json();
+      docs = docs.concat(data.documents || []);
+      if (!data.nextPageToken) break;
+      pageToken = data.nextPageToken;
+    }
+    baleListings = docs.map(d => {
+      const f = fsFieldsToObj(d.fields || {});
+      return {
+        id: 'bale_' + d.name.split('/').pop(),
+        zone: f.zone, block: f.block, floor: f.floor, price: f.price, priceText: f.priceText,
+        phone: f.phone, direction: f.direction, raw: f.raw, archived: false,
+        createdAt: f.createdAt || new Date().toISOString(),
+        source: 'bale', sourceChatTitle: f.sourceChatTitle || null,
+      };
+    });
+    mergeListingSources();
+  } catch (e) {
+    console.error('خطا در خواندنِ آگهی‌های خودکارِ بله:', e);
+  }
+}
+
+function mergeListingSources(){
+  allListings = ownListings.concat(baleListings);
+  render();
+  if (userTab === 'ghadir') renderGhadir();
+}
+
+async function init(){
+  // منتظرِ backend (Firebase: شاملِ ورودِ ناشناسِ خودکار) می‌مونیم؛ null یعنی اتصال برقرار نشد.
+  backend = await window.__backendReady;
+  db = backend ? (backend.db || null) : null;
+  await refreshAuth();
+
+  document.getElementById('notReady').classList.add('hidden');
+  document.getElementById('userView').classList.remove('hidden');
+
+  if (!db){
+    document.getElementById('uList').innerHTML = '<div class="empty">اتصال به دیتابیس برقرار نشد.</div>';
+    return;
+  }
+
+  // باگ: اگه پاک‌سازیِ خودکار همزمان با بارگذاریِ اولیه‌ی صفحه اجرا بشه، ممکنه زودتر از اینکه
+  // لیستِ «ذخیره‌ها» از دیتابیس برسه صدا زده بشه — یعنی savedListingIds هنوز خالیه و یه فایلِ
+  // واقعاً ذخیره‌شده (اما قدیمی) به‌اشتباه پاک می‌شه. برای جلوگیری، تا وقتی لیستِ ذخیره‌ها
+  // (برای کاربرهای لاگین‌کرده) حداقل یک بار از دیتابیس نرسیده، پاک‌سازیِ خودکار اجرا نمی‌شه.
+  // (savedIdsLoaded حالا متغیرِ سراسری است و attachSavedListener مدیریتش می‌کنه.)
+
+  db.collection('listings').orderBy('createdAt','desc').onSnapshot(
+    snap => { ownListings = snap.docs.map(d => ({ id:d.id, ...d.data() })); mergeListingSources(); if (savedIdsLoaded) runAutoCleanup(); },
+    err => { document.getElementById('uList').innerHTML = '<div class="empty">خطا در اتصال به داده‌ها: '+err.code+'</div>'; }
+  );
+
+  // آگهی‌هایی که سرویسِ خودکارِ بله توی Firestoreِ جدا ذخیره می‌کنه، جدا از دیتابیسِ خودِ این
+  // صفحه خونده می‌شن (چون «db» اینجا شیمِ Firestoreِ پروژه‌ی خودِ برنامه است و این کالکشن باید بدونِ ورود هم خونده بشه) و بعد کنارِ
+  // فایل‌های خودِ ادمین قاطی می‌شن تا توی اکسپلور/کوهسار/غدیر عادی دیده بشن.
+  fetchBaleListings();
+  setInterval(fetchBaleListings, 60000);
+
+  db.collection('buyers').orderBy('createdAt','desc').onSnapshot(
+    snap => { allBuyers = snap.docs.map(d => ({ id:d.id, ...d.data() })); renderBuyers(); renderSaved(); },
+    err => { document.getElementById('buyersList').innerHTML = '<div class="empty">خطا در اتصال به داده‌ها: '+err.code+'</div>'; }
+  );
+
+  attachSavedListener();
+
+  db.doc('events/main').onSnapshot(
+    doc => {
+      eventsText = (doc.exists && doc.data().text) || '';
+      if (userTab === 'events') document.getElementById('eventsText').value = eventsText;
+    },
+    err => {}
+  );
+
+  db.doc('events/alarms').onSnapshot(
+    doc => {
+      alarms = (doc.exists && doc.data().items) || [];
+      if (userTab === 'events'){ renderAlarms(); renderContacts(); }
+    },
+    err => {}
+  );
+
+  db.doc('events/notes').onSnapshot(
+    doc => {
+      eventNotes = (doc.exists && doc.data().items) || [];
+      if (userTab === 'events') renderEventNotes();
+    },
+    err => {}
+  );
+
+  db.doc('events/contacts').onSnapshot(
+    doc => {
+      contacts = (doc.exists && doc.data().items) || [];
+      if (userTab === 'events') renderContacts();
+    },
+    err => {}
+  );
+
+  db.doc('events/deals').onSnapshot(
+    doc => {
+      deals = (doc.exists && doc.data().items) || [];
+      if (userTab === 'events') renderDeals();
+    },
+    err => {}
+  );
+
+  db.doc('events/notifications').onSnapshot(
+    doc => {
+      notifications = (doc.exists && doc.data().items) || [];
+      if (userTab === 'events') renderNotifications();
+    },
+    err => {}
+  );
+
+  db.collection('maps').orderBy('createdAt','asc').onSnapshot(
+    snap => {
+      maps = snap.docs.map(d => ({ id:d.id, ...d.data() }));
+      if (userTab === 'map') renderMapPanel();
+      renderMapAdminList();
+    },
+    err => {}
+  );
+
+  authInitDone = true;
+  if (backend && backend.auth && backend.auth.onChange){
+    backend.auth.onChange(() => { refreshAuth().catch(() => {}); });
+  }
+
+  tickClock(); setInterval(tickClock, 1000);
+}
+init();
+</script>
+</body>
+</html>
+
+</body></html>
