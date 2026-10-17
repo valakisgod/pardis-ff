@@ -7,6 +7,12 @@ on:
   workflow_dispatch: {}
     # اجرای دستی از تبِ Actions توی گیت‌هاب، برای تست
 
+# جلوی اجرای هم‌زمانِ دو نمونه رو می‌گیره (مثلاً زمان‌بندیِ گیت‌هاب + تریگرِ بیرونی)،
+# چون دو نمونه با هم ممکنه یه آگهی رو دوبار اعلان بدن.
+concurrency:
+  group: poll-bale
+  cancel-in-progress: false
+
 jobs:
   poll:
     runs-on: ubuntu-latest
