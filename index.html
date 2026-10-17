@@ -252,6 +252,20 @@
   .ring-stop{width:100%; font-size:1rem; padding:14px;}
   .ring-queue-note{margin-top:10px; font-size:.72rem; color:var(--sub);}
 
+  /* اعلان‌های گوشی: پنجره‌ی تنظیمات + پیامِ کوتاهِ داخلِ برنامه (toast) */
+  .push-modal{position:fixed; inset:0; z-index:190; background:rgba(0,0,0,.6); display:flex; align-items:center; justify-content:center; padding:20px;}
+  .push-modal.hidden{display:none;}
+  .push-card{background:var(--surface); color:var(--text); border:1px solid var(--line); border-radius:18px; max-width:400px; width:100%; max-height:90vh; overflow:auto; padding:20px; box-shadow:0 20px 50px -12px rgba(0,0,0,.6);}
+  .push-card h3{margin:0 0 6px; font-size:1.02rem;}
+  .push-row{display:flex; align-items:center; justify-content:space-between; gap:14px; padding:12px 0; border-top:1px solid var(--line); cursor:pointer;}
+  .push-row b{font-size:.88rem;}
+  .push-row small{display:block; color:var(--sub); font-size:.72rem; margin-top:3px; line-height:1.6; font-weight:400;}
+  .push-row input{flex:none; width:22px; height:22px; accent-color:var(--brass-400);}
+  .push-status{min-height:1.4em; margin:10px 0; font-size:.78rem; line-height:1.7; color:var(--brass-300);}
+  .push-note{color:var(--sub); font-size:.72rem; line-height:1.8; border-top:1px solid var(--line); padding-top:10px; margin-top:6px;}
+  .push-actions{display:flex; gap:8px; flex-wrap:wrap; margin-top:12px;}
+  .pardis-toast{position:fixed; bottom:90px; left:50%; transform:translateX(-50%); z-index:300; max-width:90%; background:var(--walnut-800); color:var(--parchment-50); padding:11px 16px; border-radius:12px; font-size:.82rem; line-height:1.7; box-shadow:0 10px 30px rgba(0,0,0,.45); border:1px solid var(--brass-300);}
+
   /* «اعلانات فعال»: هر بار رویداد/معامله/مخاطب/آلارم ذخیره بشه، یه خط خلاصه این‌جا هم اضافه می‌شه */
   .notif-row{display:flex; justify-content:space-between; align-items:flex-start; gap:10px; background:var(--bg);
     border:1px solid var(--line); border-right:3px solid var(--brass-400); border-radius:8px; padding:9px 12px; font-size:.82rem; margin-bottom:8px;}
@@ -517,6 +531,7 @@
         <button id="navSaved" onclick="selectNavTab('saved')">ذخیره‌ها</button>
         <button id="navEvents" onclick="selectNavTab('events')">رویدادها</button>
         <button id="navMap" onclick="selectNavTab('map')">نقشه</button>
+        <button id="navPush" onclick="openPushSettings()">🔔 اعلان‌ها</button>
       </div>
     </div>
   </div>
@@ -811,6 +826,28 @@
     <div class="ring-time" id="ringTime"></div>
     <button class="btn-brass ring-stop" onclick="stopRingingAlarm()">قطع آلارم</button>
     <div class="ring-queue-note hidden" id="ringQueueNote"></div>
+  </div>
+</div>
+
+<!-- ============ تنظیمات اعلان‌های گوشی ============ -->
+<div id="pushModal" class="push-modal hidden" onclick="if(event.target===this)closePushSettings()">
+  <div class="push-card">
+    <h3>🔔 اعلان‌ها روی گوشی</h3>
+    <p class="hint">حتی وقتی برنامه بسته است، گوشی‌ات خبر می‌ده.</p>
+    <label class="push-row"><span><b>آگهی جدید</b><small>هر آگهی‌ای که ربات از گروه‌ها بگیره، چند دقیقه بعد (تا حدود ۱۰ دقیقه) به گوشی‌ات اعلان می‌ده.</small></span>
+      <input type="checkbox" id="pushAdsToggle" onchange="onPushToggle()"></label>
+    <label class="push-row"><span><b>یادآوری (آلارم)</b><small>وقتی زمانِ یکی از یادآوری‌هات برسه، اعلانِ ماندگار با لرزش می‌آد، حتی اگه برنامه بسته باشه.</small></span>
+      <input type="checkbox" id="pushAlarmsToggle" onchange="onPushToggle()"></label>
+    <div class="push-status" id="pushStatus"></div>
+    <div class="push-actions">
+      <button class="btn-brass btn-ghost" onclick="sendTestPush()">اعلان آزمایشی</button>
+      <button class="btn-brass btn-ghost" onclick="closePushSettings()">بستن</button>
+    </div>
+    <div class="push-note">
+      • اعلانِ آلارم با «صدای پیش‌فرضِ اعلان‌های گوشی» می‌آد؛ یه صفحه‌ی وب نمی‌تونه مثلِ برنامه‌ی ساعت زنگ بزنه. برای زنگِ واقعی، توی «رویدادها ← یادآوری» دکمه‌ی «📅 تقویم گوشی» رو بزن.<br>
+      • زمانِ رسیدنِ اعلان تا حدود ۱۰ دقیقه تأخیر داره.<br>
+      • روی آیفون اول باید برنامه رو با «Add to Home Screen» نصب کنی.
+    </div>
   </div>
 </div>
 
@@ -1673,7 +1710,7 @@ function renderAlarms(){
     return `<div class="alarm-row${a.firedAt ? ' alarm-fired' : ''}">
       <div class="alarm-row-top">
         <div class="alarm-info"><span class="alarm-ic">${a.firedAt ? '✅' : '⏰'}</span><b>${esc(formatAlarmTime(a.time))}</b>${a.label ? ' · ' + esc(a.label) : ''}${a.firedAt ? ' <span class="alarm-done">(رسید)</span>' : ''}</div>
-        <button class="mini" onclick="removeAlarm('${esc(a.id)}')">حذف</button>
+        <div style="display:flex; gap:6px; flex:none;">${a.firedAt ? '' : `<button class="mini" onclick="downloadAlarmIcs('${esc(a.id)}')" title="افزودن به تقویم گوشی (آلارمِ سیستمی)">📅 تقویم گوشی</button>`}<button class="mini" onclick="removeAlarm('${esc(a.id)}')">حذف</button></div>
       </div>
       ${chips ? `<div class="rel-chips">${chips}</div>` : ''}
     </div>`;
@@ -3615,6 +3652,7 @@ async function init(){
   // فایل‌های خودِ ادمین قاطی می‌شن تا توی اکسپلور/کوهسار/غدیر عادی دیده بشن.
   fetchBaleListings();
   setInterval(fetchBaleListings, 60000);
+  pushQuietRefresh();
 
   db.collection('buyers').orderBy('createdAt','desc').onSnapshot(
     snap => { allBuyers = snap.docs.map(d => ({ id:d.id, ...d.data() })); renderBuyers(); renderSaved(); },
@@ -3687,6 +3725,202 @@ async function init(){
 
   tickClock(); setInterval(tickClock, 1000);
 }
+// ---------------------------------------------------------------------
+// اعلان‌های گوشی (Web Push با Firebase Cloud Messaging)
+// - کاربر دو کلید داره: «آگهی جدید» و «یادآوری». توکنِ دستگاه توی push_tokens/<token> ذخیره می‌شه.
+// - ارسال سمتِ سرور (poll-once.js توی GitHub Actions) انجام می‌شه؛ اعلان رو firebase-messaging-sw.js
+//   نشون می‌ده، حتی وقتی برنامه بسته است.
+// - VAPID_KEY: کلیدِ عمومیِ Web Push (Firebase Console ← Project settings ← Cloud Messaging ←
+//   Web Push certificates ← Generate key pair). تا پر نشه، کلیدها غیرفعال می‌مونن.
+// ---------------------------------------------------------------------
+const VAPID_KEY = '';
+const FCM_SDK_BASE = 'https://cdn.jsdelivr.net/npm/firebase@10.13.0/';
+const PUSH_PREF_KEY = 'pardis_push_prefs';
+let pushPrefs = { ads: false, alarms: false };
+let pushToken = null, pushUnsub = null;
+
+function loadPushPrefs(){
+  try { const v = JSON.parse(localStorage.getItem(PUSH_PREF_KEY) || 'null'); if (v) pushPrefs = { ads: !!v.ads, alarms: !!v.alarms }; } catch (e) {}
+}
+function savePushPrefs(){
+  try { localStorage.setItem(PUSH_PREF_KEY, JSON.stringify(pushPrefs)); } catch (e) {}
+}
+function isIOSDevice(){ return /iphone|ipad|ipod/i.test(navigator.userAgent || ''); }
+function isStandaloneApp(){
+  return (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) || navigator.standalone === true;
+}
+function pushSupported(){ return ('serviceWorker' in navigator) && ('PushManager' in window) && ('Notification' in window); }
+// '' یعنی مشکلی نیست؛ وگرنه دلیلِ فارسی‌اش.
+function pushBlockReason(){
+  if (isIOSDevice() && !isStandaloneApp()) return 'روی آیفون اول باید برنامه رو از منوی Share با «Add to Home Screen» نصب کنی و از روی آیکنش باز کنی.';
+  if (!pushSupported()) return 'این مرورگر اعلانِ وب رو پشتیبانی نمی‌کنه.';
+  if (!VAPID_KEY) return 'کلیدِ اعلان هنوز تنظیم نشده؛ مدیر باید یک‌بار تنظیمش کنه.';
+  if (Notification.permission === 'denied') return 'اجازه‌ی اعلان توی تنظیماتِ مرورگر بسته است. از آیکنِ قفلِ کنارِ آدرسِ سایت بازش کن.';
+  return '';
+}
+
+async function getPushSdk(){
+  if (window.__pushSdk) return window.__pushSdk; // تست‌ها جایگزینش می‌کنن
+  const [appM, msgM] = await Promise.all([import(FCM_SDK_BASE + 'app/+esm'), import(FCM_SDK_BASE + 'messaging/+esm')]);
+  return { getApp: appM.getApp, getMessaging: msgM.getMessaging, getToken: msgM.getToken, onMessage: msgM.onMessage };
+}
+async function registerPushSw(){
+  const reg = await navigator.serviceWorker.register('firebase-messaging-sw.js');
+  await navigator.serviceWorker.ready;
+  return reg;
+}
+async function ensurePushToken(){
+  const sdk = await getPushSdk();
+  const reg = await registerPushSw();
+  const messaging = sdk.getMessaging(sdk.getApp());
+  const token = await sdk.getToken(messaging, { vapidKey: VAPID_KEY, serviceWorkerRegistration: reg });
+  if (!token) throw new Error('توکنِ اعلان گرفته نشد');
+  pushToken = token;
+  if (typeof pushUnsub === 'function') { try { pushUnsub(); } catch (e) {} }
+  pushUnsub = sdk.onMessage(messaging, onForegroundPush);
+  return token;
+}
+async function syncPushToken(){
+  if (!db) throw new Error('اتصال به دیتابیس برقرار نیست');
+  if (!pushToken && Notification.permission === 'granted' && VAPID_KEY){ try { await ensurePushToken(); } catch (e) {} }
+  if (!pushToken) return;
+  if (pushPrefs.ads || pushPrefs.alarms){
+    await db.doc('push_tokens/' + pushToken).set({ ads: !!pushPrefs.ads, alarms: !!pushPrefs.alarms, updatedAt: new Date().toISOString() });
+  } else {
+    await db.doc('push_tokens/' + pushToken).delete();
+  }
+}
+
+function showToast(text){
+  const t = document.createElement('div');
+  t.className = 'pardis-toast';
+  t.textContent = text;
+  document.body.appendChild(t);
+  setTimeout(() => { try { t.remove(); } catch (e) {} }, 6500);
+}
+// وقتی برنامه باز و روی صفحه است، FCM اعلانِ سیستمی نشون نمی‌ده؛ خودمون یه پیامِ کوتاه می‌ذاریم
+// و لیستِ آگهی‌ها/آلارم‌ها رو همون لحظه تازه می‌کنیم.
+function onForegroundPush(payload){
+  const d = (payload && payload.data) || {};
+  const first = String(d.body || '').split('\n')[0];
+  showToast((d.title || 'پردیس') + (first ? ' — ' + first : ''));
+  if (d.type === 'ad'){ try { fetchBaleListings(); } catch (e) {} }
+  if (d.type === 'alarm'){ try { checkAlarms(); } catch (e) {} }
+}
+
+function setPushStatus(text){ const el = document.getElementById('pushStatus'); if (el) el.textContent = text || ''; }
+function renderPushModal(){
+  const a = document.getElementById('pushAdsToggle'), b = document.getElementById('pushAlarmsToggle');
+  if (a) a.checked = !!pushPrefs.ads;
+  if (b) b.checked = !!pushPrefs.alarms;
+  const why = pushBlockReason();
+  const noKey = !VAPID_KEY || !pushSupported();
+  if (a) a.disabled = noKey;
+  if (b) b.disabled = noKey;
+  if (why && !document.getElementById('pushStatus').textContent) setPushStatus(why);
+}
+function openPushSettings(){
+  document.getElementById('navMenu').classList.add('hidden');
+  setPushStatus('');
+  renderPushModal();
+  document.getElementById('pushModal').classList.remove('hidden');
+}
+function closePushSettings(){ document.getElementById('pushModal').classList.add('hidden'); }
+
+async function onPushToggle(){
+  const a = document.getElementById('pushAdsToggle'), b = document.getElementById('pushAlarmsToggle');
+  const want = { ads: a.checked, alarms: b.checked };
+  const revert = (msg) => { setPushStatus(msg); a.checked = !!pushPrefs.ads; b.checked = !!pushPrefs.alarms; };
+  setPushStatus('');
+  if (want.ads || want.alarms){
+    const why = pushBlockReason();
+    if (why){ revert(why); return; }
+    try {
+      if (Notification.permission !== 'granted'){
+        const perm = await Notification.requestPermission();
+        if (perm !== 'granted'){ revert('اجازه‌ی اعلان داده نشد، پس فعال نشد.'); return; }
+      }
+      const prev = pushPrefs;
+      pushPrefs = want;
+      try {
+        await ensurePushToken();
+        await syncPushToken();
+      } catch (e) { pushPrefs = prev; throw e; }
+      savePushPrefs();
+      setPushStatus('✅ فعال شد. از این به بعد اعلان‌ها به همین گوشی می‌رسه.');
+    } catch (e) {
+      console.error('فعال‌سازیِ اعلان ناموفق بود:', e);
+      revert('فعال‌سازی ناموفق بود: ' + ((e && e.message) || e));
+    }
+  } else {
+    pushPrefs = want;
+    savePushPrefs();
+    try { await syncPushToken(); } catch (e) { console.error(e); }
+    setPushStatus('اعلان‌ها خاموش شد.');
+  }
+}
+
+async function sendTestPush(){
+  if (!pushSupported()){ setPushStatus('این مرورگر اعلانِ وب رو پشتیبانی نمی‌کنه.'); return; }
+  try {
+    let perm = Notification.permission;
+    if (perm === 'default') perm = await Notification.requestPermission();
+    if (perm !== 'granted'){ setPushStatus('اجازه‌ی اعلان بسته است. از آیکنِ قفلِ کنارِ آدرس بازش کن.'); return; }
+    const reg = await registerPushSw();
+    await reg.showNotification('🔔 اعلان آزمایشیِ پردیس', {
+      body: 'اگه این رو می‌بینی، گوشی‌ات اعلانِ پردیس رو نشون می‌ده.',
+      icon: 'icons/icon-192.png', badge: 'icons/favicon-32.png', vibrate: [200, 100, 200], dir: 'rtl', lang: 'fa', tag: 'pardis-test',
+    });
+    setPushStatus('اعلانِ آزمایشی فرستاده شد.');
+  } catch (e) {
+    console.error(e);
+    setPushStatus('نمایشِ اعلان ناموفق بود: ' + ((e && e.message) || e));
+  }
+}
+
+// هر بار که برنامه باز می‌شه، اگه قبلاً روشن کرده بود، توکن بی‌صدا تازه می‌شه (توکن‌ها گاهی عوض می‌شن).
+async function pushQuietRefresh(){
+  loadPushPrefs();
+  if (!(pushPrefs.ads || pushPrefs.alarms)) return;
+  if (pushBlockReason()) return;
+  if (Notification.permission !== 'granted') return;
+  try { await ensurePushToken(); await syncPushToken(); } catch (e) { console.error('تازه‌سازیِ توکنِ اعلان ناموفق بود:', e); }
+}
+
+// ---------------------------------------------------------------------
+// «تقویم گوشی»: فایلِ .ics با یه VALARM می‌سازه که برنامه‌ی تقویمِ گوشی دقیقاً سرِ وقت اعلان
+// (آلارمِ سیستمی) می‌ده؛ به باز بودنِ برنامه یا سرورِ ما وابسته نیست.
+// ---------------------------------------------------------------------
+function icsEscape(s){ return String(s == null ? '' : s).replace(/\\/g, '\\\\').replace(/;/g, '\\;').replace(/,/g, '\\,').replace(/\r?\n/g, '\\n'); }
+function icsDate(d){ return d.toISOString().replace(/[-:]/g, '').replace(/\.\d{3}/, ''); }
+function buildAlarmIcs(a){
+  const start = new Date(a.time), end = new Date(start.getTime() + 15 * 60000);
+  const title = '⏰ ' + (a.label || 'یادآوری پردیس');
+  return [
+    'BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//Pardis//Reminder//FA', 'CALSCALE:GREGORIAN',
+    'BEGIN:VEVENT',
+    'UID:' + a.id + '@pardis-ff',
+    'DTSTAMP:' + icsDate(new Date()),
+    'DTSTART:' + icsDate(start),
+    'DTEND:' + icsDate(end),
+    'SUMMARY:' + icsEscape(title),
+    'DESCRIPTION:' + icsEscape('یادآوری پردیس فاز ۱۱'),
+    'BEGIN:VALARM', 'ACTION:DISPLAY', 'DESCRIPTION:' + icsEscape(title), 'TRIGGER:PT0S', 'END:VALARM',
+    'END:VEVENT', 'END:VCALENDAR',
+  ].join('\r\n') + '\r\n';
+}
+function downloadAlarmIcs(id){
+  const a = alarms.find(x => x.id === id);
+  if (!a) return;
+  const blob = new Blob([buildAlarmIcs(a)], { type: 'text/calendar;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url; link.download = 'pardis-reminder.ics';
+  document.body.appendChild(link); link.click(); link.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 4000);
+  showToast('فایلِ تقویم دانلود شد؛ بازش کن تا به تقویمِ گوشی اضافه شه.');
+}
+
 init();
 </script>
 </body>

@@ -1,14 +1,15 @@
 // ------------------------------------------------------------------
 // نسخه‌ی «یک‌باره»ی سرویسِ ربات، مخصوصِ اجرا توسطِ GitHub Actions با زمان‌بندی (cron).
 // برخلافِ index.js (که یه حلقه‌ی بی‌نهایته و نیاز به سرورِ همیشه-روشن داره)، این اسکریپت
-// فقط یه‌بار پیام‌های تازه رو چک می‌کنه، آگهی‌هاشون رو ذخیره می‌کنه و تموم می‌شه — هر چند
-// دقیقه یه‌بار، GitHub Actions خودش دوباره اجراش می‌کنه، بدون نیاز به هیچ هاستینگِ ۲۴ساعته
-// و بدون نیاز به کارتِ بانکی.
+// فقط یه‌بار پیام‌های تازه رو چک می‌کنه، آگهی‌هاشون رو ذخیره می‌کنه، اعلانِ گوشی می‌فرسته
+// (آگهیِ جدید + آلارم‌های رسیده) و تموم می‌شه — هر چند دقیقه یه‌بار، GitHub Actions خودش
+// دوباره اجراش می‌کنه، بدون نیاز به هیچ هاستینگِ ۲۴ساعته و بدون نیاز به کارتِ بانکی.
 // ------------------------------------------------------------------
 'use strict';
 
 const admin = require('firebase-admin');
 const { extractAds, dedupKey } = require('./ads-parser');
+const { notifyNewAds, notifyDueAlarms } = require('./push');
 
 const BOT_TOKEN = process.env.BALE_BOT_TOKEN;
 const API_BASE = `https://tapi.bale.ai/bot${BOT_TOKEN}`;
@@ -49,7 +50,17 @@ async function fetchUpdates(offset) {
   return data.result || [];
 }
 
-async function processMessage(msg) {
+// آگهی «تازه» یعنی: نه همین سند از قبل وجود داشته (اجرای دوباره‌ی همون پیام)، و نه آگهیِ
+// هم‌کلیدی (همون زون/بلوک/طبقه/قیمت/تلفن) قبلاً از یه گروهِ دیگه یا پیامِ دیگه اومده —
+// تا یه فایل که چند جا تکرار می‌شه، چند اعلانِ تکراری نسازه.
+async function isNewAd(docId, key) {
+  const same = await listingsCol.doc(docId).get();
+  if (same.exists) return false;
+  const dup = await listingsCol.where('dedupKey', '==', key).limit(2).get();
+  return !dup.docs.some(d => d.id !== docId);
+}
+
+async function processMessage(msg, newAds) {
   const chat = msg.chat || {};
   if (chat.type !== 'group' && chat.type !== 'supergroup') return 0;
 
@@ -60,37 +71,53 @@ async function processMessage(msg) {
   if (!ads.length) return 0;
 
   const batch = db.batch();
-  ads.forEach((ad, i) => {
+  for (let i = 0; i < ads.length; i++) {
+    const ad = ads[i];
     const docId = `${chat.id}_${msg.message_id}_${i}`;
+    const key = dedupKey(ad);
+    if (await isNewAd(docId, key)) newAds.push(ad);
     batch.set(listingsCol.doc(docId), {
       zone: ad.zone, block: ad.block, floor: ad.floor, price: ad.price, priceText: ad.priceText,
-      phone: ad.phone, direction: ad.direction, raw: ad.raw, dedupKey: dedupKey(ad),
+      phone: ad.phone, direction: ad.direction, raw: ad.raw, dedupKey: key,
       sourceChatId: String(chat.id), sourceChatTitle: chat.title || null, sourceMessageId: msg.message_id,
       createdAt: admin.firestore.FieldValue.serverTimestamp(),
     }, { merge: true });
-  });
+  }
   await batch.commit();
   console.log(`${ads.length} آگهی از گروه «${chat.title || chat.id}» ذخیره شد.`);
   return ads.length;
 }
 
 (async () => {
+  let exitCode = 0;
   try {
     const offset = await getOffset();
     const updates = await fetchUpdates(offset);
     console.log(`${updates.length} آپدیتِ تازه دریافت شد.`);
     let total = 0;
+    const newAds = [];
     for (const update of updates) {
       if (update.message) {
-        try { total += await processMessage(update.message); }
+        try { total += await processMessage(update.message, newAds); }
         catch (e) { console.error('خطا در پردازشِ پیام:', e.message); }
       }
       await saveOffset(update.update_id);
     }
-    console.log(`تمام. مجموعاً ${total} آگهیِ تازه ذخیره شد.`);
-    process.exit(0);
+    console.log(`تمام. مجموعاً ${total} آگهی ذخیره شد (${newAds.length} تا واقعاً تازه).`);
+
+    // اعلان‌های گوشی: خطا توی این بخش نباید ذخیره‌ی آگهی‌ها رو خراب کنه.
+    const messaging = admin.messaging();
+    try {
+      const r = await notifyNewAds(messaging, db, newAds);
+      if (newAds.length) console.log('اعلانِ آگهیِ جدید:', JSON.stringify(r));
+    } catch (e) { console.error('ارسالِ اعلانِ آگهی ناموفق بود:', e.message); }
+    try {
+      const r = await notifyDueAlarms(messaging, db, Date.now());
+      if (r.due) console.log('اعلانِ آلارم:', JSON.stringify(r));
+    } catch (e) { console.error('ارسالِ اعلانِ آلارم ناموفق بود:', e.message); }
   } catch (e) {
     console.error('خطا:', e.message);
-    process.exit(1);
+    exitCode = 1;
   }
+  process.exit(exitCode);
 })();

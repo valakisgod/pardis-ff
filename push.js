@@ -1,0 +1,146 @@
+// ------------------------------------------------------------------
+// ارسالِ اعلانِ گوشی (Firebase Cloud Messaging) برای آگهیِ جدید و یادآوری (آلارم).
+// منطقِ «چی بفرستیم» این‌جا جداست (بدونِ نیاز به Firebase) تا بشه تستش کرد؛
+// poll-once.js فقط ازش استفاده می‌کنه.
+// ------------------------------------------------------------------
+'use strict';
+
+const APP_URL = 'https://valakisgod.github.io/pardis-ff/';
+const MAX_TOKENS_PER_BATCH = 500;       // سقفِ FCM برای هر درخواستِ گروهی
+const ALARM_MAX_AGE_MS = 6 * 60 * 60 * 1000; // آلارمی که بیشتر از ۶ ساعت پیش رسیده دیگه فرستاده نمی‌شه
+const PUSHED_ALARM_IDS_KEEP = 300;
+
+const DEAD_TOKEN_CODES = new Set([
+  'messaging/registration-token-not-registered',
+  'messaging/invalid-registration-token',
+]);
+// (عمداً «invalid-argument» اینجا نیست: اون خطا ممکنه از خودِ پیام باشه، نه توکن، و نباید
+// باعثِ پاک‌شدنِ همه‌ی توکن‌ها بشه.)
+
+function zoneLabel(z) {
+  if (z === 'kuhsar') return 'کوهسار';
+  if (z === 'ghadir') return 'غدیر';
+  return 'زون ' + z;
+}
+
+function describeAd(ad) {
+  const parts = [zoneLabel(ad.zone)];
+  if (ad.block != null) parts.push('بلوک ' + ad.block);
+  if (ad.floor != null) parts.push(ad.floor === 0 ? 'همکف' : 'طبقه ' + ad.floor);
+  if (ad.direction) parts.push(ad.direction);
+  if (ad.price != null) parts.push(Number(ad.price).toLocaleString('en-US'));
+  return parts.join(' · ');
+}
+
+// همه‌ی آگهی‌های تازه‌ی یک اجرا → یک اعلان (نه یکی برای هر آگهی، که گوشی رو پر کنه).
+function buildNewAdsPayload(newAds) {
+  if (!newAds.length) return null;
+  if (newAds.length === 1) {
+    return {
+      type: 'ad',
+      title: '🏠 آگهی جدید',
+      body: describeAd(newAds[0]),
+      tag: 'pardis-new-ads',
+      url: APP_URL,
+    };
+  }
+  const shown = newAds.slice(0, 3).map(describeAd);
+  const rest = newAds.length - shown.length;
+  return {
+    type: 'ad',
+    title: `🏠 ${newAds.length} آگهی جدید`,
+    body: shown.join('\n') + (rest > 0 ? `\nو ${rest} آگهیِ دیگه` : ''),
+    tag: 'pardis-new-ads',
+    url: APP_URL,
+  };
+}
+
+// آلارم‌هایی که زمانشون رسیده، هنوز توی برنامه زنگ نخوردن (firedAt ندارن) و قبلاً اعلانشون
+// فرستاده نشده.
+function dueAlarms(items, pushedIds, nowMs) {
+  const pushed = new Set(pushedIds || []);
+  return (items || []).filter(a => {
+    if (!a || !a.id || !a.time || a.firedAt || pushed.has(a.id)) return false;
+    const t = new Date(a.time).getTime();
+    if (isNaN(t)) return false;
+    return t <= nowMs && nowMs - t <= ALARM_MAX_AGE_MS;
+  });
+}
+
+function buildAlarmPayload(alarm) {
+  return {
+    type: 'alarm',
+    title: '⏰ یادآوری',
+    body: alarm.label ? String(alarm.label) : 'زمانِ یادآوری‌ات رسید.',
+    tag: 'pardis-alarm-' + alarm.id,
+    url: APP_URL,
+  };
+}
+
+function toFcmMessage(payload, tokens) {
+  // فقط «data» می‌فرستیم (بدونِ کلیدِ notification) تا خودِ service worker اعلان رو بسازه و
+  // بتونه لرزش/ماندگاریِ آلارم رو تنظیم کنه. همه‌ی مقدارها باید رشته باشن.
+  const data = {};
+  for (const [k, v] of Object.entries(payload)) data[k] = String(v);
+  return {
+    tokens,
+    data,
+    webpush: { headers: { Urgency: 'high', TTL: payload.type === 'alarm' ? '3600' : '86400' } },
+  };
+}
+
+// messaging: admin.messaging()؛ db: admin.firestore() — هر دو تزریق می‌شن تا تست‌پذیر باشه.
+async function sendToTokens(messaging, db, tokenDocs, payload) {
+  const tokens = tokenDocs.map(d => d.id);
+  let ok = 0, dead = 0;
+  for (let i = 0; i < tokens.length; i += MAX_TOKENS_PER_BATCH) {
+    const chunk = tokens.slice(i, i + MAX_TOKENS_PER_BATCH);
+    const res = await messaging.sendEachForMulticast(toFcmMessage(payload, chunk));
+    const deadRefs = [];
+    res.responses.forEach((r, idx) => {
+      if (r.success) { ok++; return; }
+      const code = r.error && r.error.code;
+      if (DEAD_TOKEN_CODES.has(code)) deadRefs.push(chunk[idx]);
+      else console.error('ارسالِ اعلان ناموفق:', code || (r.error && r.error.message));
+    });
+    for (const t of deadRefs) { await db.collection('push_tokens').doc(t).delete(); dead++; }
+  }
+  return { ok, dead };
+}
+
+async function getTokenDocs(db, field) {
+  const snap = await db.collection('push_tokens').where(field, '==', true).get();
+  return snap.docs;
+}
+
+async function notifyNewAds(messaging, db, newAds) {
+  const payload = buildNewAdsPayload(newAds);
+  if (!payload) return { ok: 0, dead: 0, skipped: 'no-ads' };
+  const docs = await getTokenDocs(db, 'ads');
+  if (!docs.length) return { ok: 0, dead: 0, skipped: 'no-tokens' };
+  return sendToTokens(messaging, db, docs, payload);
+}
+
+async function notifyDueAlarms(messaging, db, nowMs) {
+  const alarmsSnap = await db.collection('events').doc('alarms').get();
+  const items = alarmsSnap.exists ? (alarmsSnap.data().items || []) : [];
+  const pushedRef = db.collection('_meta').doc('pushed_alarms');
+  const pushedSnap = await pushedRef.get();
+  const pushedIds = pushedSnap.exists ? (pushedSnap.data().ids || []) : [];
+  const due = dueAlarms(items, pushedIds, nowMs);
+  if (!due.length) return { sent: 0 };
+  const docs = await getTokenDocs(db, 'alarms');
+  let sent = 0;
+  for (const a of due) {
+    if (docs.length) { const r = await sendToTokens(messaging, db, docs, buildAlarmPayload(a)); sent += r.ok; }
+  }
+  // حتی اگه هیچ‌کس مشترک نبود، علامت می‌زنیم تا بعداً که کسی مشترک شد، آلارمِ قدیمی نرسه.
+  const ids = [...pushedIds, ...due.map(a => a.id)].slice(-PUSHED_ALARM_IDS_KEEP);
+  await pushedRef.set({ ids }, { merge: true });
+  return { sent, due: due.length };
+}
+
+module.exports = {
+  APP_URL, describeAd, buildNewAdsPayload, dueAlarms, buildAlarmPayload, toFcmMessage,
+  sendToTokens, notifyNewAds, notifyDueAlarms,
+};
