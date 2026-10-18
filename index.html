@@ -994,7 +994,7 @@ window.__createFirebaseBackend = async function(sdk){
   const auth = sdk.getAuth(app);
   // ignoreUndefinedProperties: Firestore برخلافِ دیتابیسِ قبلی روی فیلدِ undefined خطا می‌ده
   const firestore = sdk.initializeFirestore
-    ? sdk.initializeFirestore(app, { ignoreUndefinedProperties: true })
+    ? sdk.initializeFirestore(app, { ignoreUndefinedProperties: true, experimentalAutoDetectLongPolling: true })
     : sdk.getFirestore(app);
   const storage = sdk.getStorage(app);
 
