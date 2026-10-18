@@ -41,13 +41,27 @@ async function saveOffset(updateId) {
   await metaRef.set({ lastUpdateId: updateId, updatedAt: admin.firestore.FieldValue.serverTimestamp() }, { merge: true });
 }
 
+// سرورِ بله توی ایرانه و از سمتِ GitHub (آمریکا) گاهی خیلی کند جواب می‌ده؛ بدونِ سقفِ زمانی یه
+// درخواستِ گیرکرده تا ~۱ دقیقه (و با قفلِ «یه اجرا در لحظه» همه‌ی اجراهای بعدی رو) معطل می‌کنه.
+// پس هر تلاش سقفِ ۲۰ ثانیه داره و تا ۳ بار دوباره امتحان می‌شه.
 async function fetchUpdates(offset) {
-  // timeout=0: بدونِ long-polling، فوری هر چی هست برمی‌گردونه (مناسبِ یه اجرای کوتاه)
   const url = `${API_BASE}/getUpdates?offset=${offset}&timeout=0`;
-  const res = await fetch(url);
-  const data = await res.json();
-  if (!data.ok) throw new Error('getUpdates ناموفق: ' + JSON.stringify(data));
-  return data.result || [];
+  let lastErr;
+  for (let attempt = 1; attempt <= 3; attempt++) {
+    const t0 = Date.now();
+    try {
+      const res = await fetch(url, { signal: AbortSignal.timeout(20000) });
+      const data = await res.json();
+      if (!data.ok) throw new Error('getUpdates ناموفق: ' + JSON.stringify(data));
+      console.log(`getUpdates (تلاشِ ${attempt}) در ${Date.now() - t0}ms جواب داد.`);
+      return data.result || [];
+    } catch (e) {
+      lastErr = e;
+      console.error(`getUpdates (تلاشِ ${attempt}) بعد از ${Date.now() - t0}ms ناموفق: ${e.message}`);
+      if (attempt < 3) await new Promise(r => setTimeout(r, 2000));
+    }
+  }
+  throw lastErr;
 }
 
 // آگهی «تازه» یعنی: نه همین سند از قبل وجود داشته (اجرای دوباره‌ی همون پیام)، و نه آگهیِ
@@ -62,13 +76,22 @@ async function isNewAd(docId, key) {
 
 async function processMessage(msg, newAds) {
   const chat = msg.chat || {};
-  if (chat.type !== 'group' && chat.type !== 'supergroup') return 0;
+  if (chat.type !== 'group' && chat.type !== 'supergroup') {
+    console.log(`نادیده: پیام توی چتِ «${chat.type}» (${chat.title || chat.id}) — فقط گروه/سوپرگروه خونده می‌شه.`);
+    return 0;
+  }
 
   const text = msg.text || msg.caption || '';
-  if (!text) return 0;
+  if (!text) {
+    console.log(`نادیده: پیامِ بدونِ متن توی «${chat.title || chat.id}» (عکس/استیکر/...).`);
+    return 0;
+  }
 
   const ads = extractAds(text);
-  if (!ads.length) return 0;
+  if (!ads.length) {
+    console.log(`بدونِ آگهی: پیامی توی «${chat.title || chat.id}» (${text.length} نویسه) آگهیِ قابلِ‌تشخیص نداشت.`);
+    return 0;
+  }
 
   const batch = db.batch();
   for (let i = 0; i < ads.length; i++) {
@@ -100,6 +123,8 @@ async function processMessage(msg, newAds) {
       if (update.message) {
         try { total += await processMessage(update.message, newAds); }
         catch (e) { console.error('خطا در پردازشِ پیام:', e.message); }
+      } else {
+        console.log(`نادیده: آپدیتِ #${update.update_id} از نوعِ ${Object.keys(update).filter(k => k !== 'update_id').join(',') || 'نامشخص'} (پیامِ معمولی نیست).`);
       }
       await saveOffset(update.update_id);
     }

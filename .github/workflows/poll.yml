@@ -16,6 +16,8 @@ concurrency:
 jobs:
   poll:
     runs-on: ubuntu-latest
+    # اجرای گیرکرده خودش بعد از ۵ دقیقه تموم بشه تا صفِ اجراهای بعدی رو (به‌خاطرِ قفلِ concurrency) نبنده
+    timeout-minutes: 5
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
