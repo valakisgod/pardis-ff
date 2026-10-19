@@ -14,15 +14,17 @@ function grab(name) {
   }
 }
 function load(names, ctx) {
-  const consts = ['CMP_MIN_UNITS', 'CMP_SHOW_PCT'].map(c => html.match(new RegExp('const ' + c + ' = [^;]+;'))[0]).join('\n');
-  const code = consts + '\nlet _blockStatsFor = null, _blockStats = null;\n' + names.map(grab).join('\n');
+  const tagDefs = html.slice(html.indexOf('const NO_LOAN_RE'), html.indexOf('];', html.indexOf('const TAG_DEFS')) + 2);
+  const tagIds = html.match(/const TAG_FILTER_IDS = [^;]+;/)[0];
+  const consts = tagDefs + '\n' + tagIds + '\nlet activeTags = new Set();\n' + ['CMP_MIN_UNITS', 'CMP_SHOW_PCT'].map(c => html.match(new RegExp('const ' + c + ' = [^;]+;'))[0]).join('\n');
+  const code = consts + '\nlet _blockStatsFor = null, _blockStats = null;\n' + names.map(grab).join('\n') + '\nthis.activeTags = activeTags;';
   vm.createContext(ctx); vm.runInContext(code, ctx); return ctx;
 }
 
 let failures = 0, n = 0;
 const assert = (c, m) => { n++; if (!c) { failures++; console.error('FAIL:', m); } };
 
-const ctx = load(['dedupKey', 'unitId', 'getBlockStats', 'medianOf', 'fmtMillions', 'priceVsBlock', 'cmpBadgeHtml', 'cmpDetailHtml'],
+const ctx = load(['normalizeNumbers', 'normalizeChars', 'extractTags', 'displayTags', 'listingTags', 'matchesTags', 'tagsHtml', 'dedupKey', 'unitId', 'getBlockStats', 'medianOf', 'fmtMillions', 'priceVsBlock', 'cmpBadgeHtml', 'cmpDetailHtml'],
   { allListings: [], esc: x => String(x) });
 const L = (o) => Object.assign({ id: Math.random(), zone: 3, block: 12, floor: 1, direction: 'شمالی', price: 6000, phone: '0912', createdAt: '2026-10-01T00:00:00Z' }, o);
 const setAll = (arr) => { ctx.allListings = arr; };   // آرایه‌ی تازه = کش باطل می‌شه، مثل mergeListingSources
@@ -58,6 +60,26 @@ setAll([...base, L({ floor: 6, price: 1000, archived: true }), L({ floor: 7, pri
 c = ctx.priceVsBlock(cheap);
 assert(c.n === 4 && c.min === 5800, 'آرشیو/زونِ دیگه/بدونِ بلوک حساب نشن: ' + JSON.stringify(c));
 assert(ctx.priceVsBlock(L({ price: null })) === null && ctx.priceVsBlock(L({ block: null })) === null, 'بدونِ قیمت/بلوک → null');
+
+// ---- فیلترِ برچسب‌ها ----
+const T = (raw, tags) => L({ raw, tags, floor: Math.floor(Math.random() * 1e6) });
+const loanFull = T('زون 3 بلوک 12 وام ب روز تخلیه ب روز', undefined);   // قدیمی: برچسبِ ذخیره‌شده ندارد
+const guar = T('ضامن وام ت', ['guarantor', 'loan']);                      // جدید: برچسبِ ذخیره‌شده دارد
+const plain = T('قیمت 7000', []);
+assert(ctx.listingTags(loanFull).includes('loan_current') && ctx.listingTags(loanFull).includes('vacant_now'), 'فایلِ قدیمی از روی متنِ اصلی برچسب می‌گیرد');
+assert(ctx.listingTags(guar).join() === 'guarantor,loan', 'برچسبِ ذخیره‌شده ملاک است');
+const pass = (l) => ctx.matchesTags(l);
+assert([loanFull, guar, plain].every(pass), 'بدونِ فیلتر همه رد می‌شن');
+ctx.activeTags.add('loan');
+assert(pass(loanFull) && pass(guar) && !pass(plain), 'فیلترِ وام‌دار');
+ctx.activeTags.add('guarantor');
+assert(!pass(loanFull) && pass(guar), 'دو برچسب با هم «و» می‌شن');
+ctx.activeTags.clear();
+ctx.activeTags.add('loan_current'); ctx.activeTags.add('vacant_now');
+assert(pass(loanFull) && !pass(guar), 'وام به‌روز و تخلیه به‌روز');
+assert(ctx.tagsHtml(loanFull).includes('وام به‌روز') && !ctx.tagsHtml(loanFull).includes('>وام‌دار<'), 'کارت فقط برچسبِ دقیق‌تر را نشان می‌دهد');
+assert(ctx.tagsHtml(plain) === '', 'بدونِ برچسب، چیزی نشون داده نمی‌شه');
+ctx.activeTags.clear();
 
 // قالبِ قیمت
 assert(ctx.fmtMillions(6250) === '6/250' && ctx.fmtMillions(8000) === '8/000' && ctx.fmtMillions(950) === '950', 'قالبِ قیمت');

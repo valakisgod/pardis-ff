@@ -138,7 +138,7 @@ async function processMessage(msg, newAds) {
     }
     batch.set(listingsCol.doc(docId), {
       zone: ad.zone, block: ad.block, floor: ad.floor, price: ad.price, priceText: ad.priceText,
-      phone: ad.phone, direction: ad.direction, raw: ad.raw, dedupKey: key,
+      phone: ad.phone, direction: ad.direction, raw: ad.raw, tags: ad.tags || [], dedupKey: key,
       ...(drop ? { priceDrop: drop } : {}),
       sourceChatId: String(chat.id), sourceChatTitle: chat.title || null, sourceMessageId: msg.message_id,
       createdAt: admin.firestore.FieldValue.serverTimestamp(),

@@ -41,6 +41,43 @@ const dirMap = [
   [new RegExp(letterBoundary.replace('%s', 'غ')), 'غربی'],
 ];
 
+// ---------------------------------------------------------------------
+// برچسب‌های آگهی (از روی متنِ خودِ آگهی). مخفف‌ها طبقِ توضیحِ کاربر: «ت» بعد از وام/ورودی/عرصه یعنی
+// «تسویه»، ولی «ت» کنارِ قیمت یعنی «تومان» — برای همین «ت» فقط اون‌جا که پشتِ کلمه‌ی وام/ورودی
+// می‌آد معنی‌دار حساب می‌شه، و برچسبِ «ورودی تسویه» فقط وقتی داده می‌شه که «ت» (یا «تسویه»)
+// بلافاصله بعدِ «ورودی» بیاد، نه وقتی یه عدد بینشون هست (مثل «ورودی 300 ت» = ۳۰۰ تومان).
+// «وام به‌روز» و «تخلیه به‌روز» هم «وام/تخلیه + ب روز / به روز» هستن.
+// ---------------------------------------------------------------------
+const NO_LOAN_RE = /(?:بدون|بی|فاقد)\s*وام|وام\s*ندار/;
+const TAG_DEFS = [
+  { id: 'loan',          label: 'وام‌دار',        re: /وام/, not: NO_LOAN_RE },
+  { id: 'loan_current',  label: 'وام به‌روز',     re: /وام\s*(?:ب\s*روز|به\s*روز)/, not: NO_LOAN_RE },
+  { id: 'no_loan',       label: 'بدون وام',       re: NO_LOAN_RE },
+  { id: 'entry_settled', label: 'ورودی تسویه',    re: /ورودی\s*(?:ت(?![آ-ی])|تسویه)/ },
+  { id: 'guarantor',     label: 'ضامن',           re: /ضامن/ },
+  { id: 'vacant',        label: 'تخلیه',          re: /تخلیه/ },
+  { id: 'vacant_now',    label: 'تخلیه به‌روز',   re: /تخلیه\s*(?:ب\s*روز|به\s*روز|فوری)/ },
+  { id: 'docs_named',    label: 'مدارک به نام',   re: /مدارک\s*(?:ب|به)\s*نام/ },
+  { id: 'land',          label: 'عرصه',           re: /عرصه/ },
+  { id: 'full',          label: 'فول',            re: /(?<![آ-ی])فول(?![آ-ی])/ },
+  { id: 'view',          label: 'ویو',            re: /ویو/ },
+  { id: 'notary',        label: 'محضر',           re: /محضر/ },
+];
+
+// شناسه‌ی برچسب‌های یه متن. «وام به‌روز» حتماً «وام‌دار» هم هست و «تخلیه به‌روز» «تخلیه» هم.
+function extractTags(text){
+  const t = normalizeNumbers(normalizeChars(text || ''));
+  return TAG_DEFS.filter(d => d.re.test(t) && !(d.not && d.not.test(t))).map(d => d.id);
+}
+
+// برچسب‌هایی که نشون داده می‌شن: اگه «وام به‌روز» هست «وام‌دار» جدا نشون داده نمی‌شه (و مشابهش تخلیه)
+function displayTags(ids){
+  const has = new Set(ids || []);
+  return TAG_DEFS.filter(d => has.has(d.id)
+    && !(d.id === 'loan' && has.has('loan_current'))
+    && !(d.id === 'vacant' && has.has('vacant_now')));
+}
+
 function trimSeparatorLines(lines) {
   const hasContent = l => /[\p{L}\p{N}]/u.test(l);
   let a = 0, b = lines.length;
@@ -96,7 +133,7 @@ function parsePrice(text) {
 // هیچ قیمتِ دیگه‌ای (x/xxx یا ۴-۵ رقمی) توی آگهی پیدا نشده باشه، و آخرین خطِ تک‌عددی انتخاب می‌شه.
 function parseLonePrice(lines) {
   for (let i = lines.length - 1; i >= 0; i--) {
-    const m = lines[i].trim().match(/^(\d{1,2})$/);
+    const m = lines[i].trim().match(/^(\d{1,2})\s*(?:تومان|ت|میلیارد)?$/);
     if (m && +m[1] > 0) return { price: +m[1] * 1000, priceText: m[1] };
   }
   return { price: null, priceText: null };
@@ -131,7 +168,7 @@ function extractAds(rawText, opts = {}) {
     let direction = null;
     for (const [re, label] of dirMap) { if (re.test(joined)) { direction = label; break; } }
     const zoneVal = isKuhsar ? 'kuhsar' : (isGhadirOnly ? 'ghadir' : +zm[1]);
-    ads.push({ zone: zoneVal, block: bm ? +bm[1] : null, floor, price, priceText, phone: phm ? phm[1] : null, direction, raw: rec.raw, _blockIndex: rec.blockIndex });
+    ads.push({ zone: zoneVal, block: bm ? +bm[1] : null, floor, price, priceText, phone: phm ? phm[1] : null, direction, raw: rec.raw, tags: extractTags(joined), _blockIndex: rec.blockIndex });
   }
 
   // چند فایل پشتِ‌سرِهم توی یه پیام، و فقط آخرِ همه‌شون یه‌بار شماره‌تلفن (برای همه‌ی فایل‌ها).
@@ -229,4 +266,4 @@ function adMatchesBuyer(ad, criteria) {
   return true;
 }
 
-module.exports = { extractAds, splitIntoRecords, parsePrice, dedupKey, extractBuyerRequests, buyerCriteria, adMatchesBuyer, sameUnit, findPriceDrop };
+module.exports = { extractAds, splitIntoRecords, parsePrice, dedupKey, extractBuyerRequests, buyerCriteria, adMatchesBuyer, sameUnit, findPriceDrop, extractTags, displayTags, TAG_DEFS };

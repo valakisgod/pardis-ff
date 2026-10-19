@@ -317,6 +317,8 @@
   .status-badge.status-negotiating{background:var(--brass-600);}
   .status-badge.status-sold{background:#6b6b6b;}
   /* نشانِ «این فایل خودکار از گروهِ بله خونده شده» — تا ادمین بدونه هنوز دستی تأیید/بازبینی نشده. */
+  .tag-chip{display:inline-block; font-size:.66rem; background:var(--bg); border:1px solid var(--line); color:var(--brass-400); border-radius:999px; padding:1px 8px; margin:3px 0 0 4px;}
+  .tag-filters .chip.on{outline:2px solid var(--brass-400);}
   .cmp-low{color:#2f8f5b; font-weight:700;}
   .cmp-high{color:#b0503f; font-weight:700;}
   .drop-badge{display:inline-block; font-size:.62rem; font-weight:700; background:#2f8f5b; color:#fff; border-radius:6px; padding:1px 7px; margin-right:6px; vertical-align:middle;}
@@ -552,6 +554,7 @@
       <span>تا</span>
       <input type="text" id="priceMaxInput" placeholder="حداکثر قیمت" inputmode="numeric" oninput="onPriceRangeInput()">
     </div>
+    <div class="u-filters tag-filters" id="tagFilters"></div>
     <div class="u-sort" id="sortFilters">
       <div class="chip on" data-sort="block">بر اساس بلوک</div>
       <div class="chip" data-sort="price">بر اساس قیمت</div>
@@ -568,6 +571,7 @@
     </div>
     <div id="manualResultsWrap" class="hidden">
       <button class="mini-back" onclick="manualBack()">‹ بازگشت</button>
+      <div class="u-filters tag-filters" id="manualTagFilters"></div>
       <div class="u-list" id="manualList"></div>
     </div>
   </div>
@@ -1401,6 +1405,38 @@ function matchesSearch(l){
   const haystack = [l.zone, l.block, floorLabel(l.floor) || '', l.direction || '', l.phone || '', l.priceText || '', l.price || '']
     .join(' ');
   return haystack.includes(searchQuery);
+}
+
+// فیلترِ برچسب‌ها: چند برچسبِ انتخاب‌شده با هم «و» می‌شن (فایل باید همه‌شون رو داشته باشه).
+// فایل‌های قدیمی که برچسب ذخیره‌شده ندارن، از روی متنِ اصلی‌شون برچسب می‌گیرن.
+let activeTags = new Set();
+const TAG_FILTER_IDS = ['loan', 'loan_current', 'entry_settled', 'guarantor', 'vacant_now', 'docs_named', 'land', 'full', 'view', 'notary', 'no_loan'];
+
+function listingTags(l){
+  return Array.isArray(l.tags) ? l.tags : extractTags(l.raw || '');
+}
+function matchesTags(l){
+  if (!activeTags.size) return true;
+  const have = new Set(listingTags(l));
+  for (const id of activeTags) if (!have.has(id)) return false;
+  return true;
+}
+function tagsHtml(l){
+  const shown = displayTags(listingTags(l));
+  return shown.length ? `<div>${shown.map(d => `<span class="tag-chip">${esc(d.label)}</span>`).join('')}</div>` : '';
+}
+function renderTagFilters(){
+  const html = TAG_FILTER_IDS.map(id => {
+    const d = TAG_DEFS.find(x => x.id === id);
+    return `<div class="chip${activeTags.has(id) ? ' on' : ''}" onclick="toggleTagFilter('${id}')">${esc(d.label)}</div>`;
+  }).join('');
+  for (const elId of ['tagFilters', 'manualTagFilters']){
+    const el = document.getElementById(elId); if (el) el.innerHTML = html;
+  }
+}
+function toggleTagFilter(id){
+  if (activeTags.has(id)) activeTags.delete(id); else activeTags.add(id);
+  renderTagFilters(); render(); renderManual();
 }
 
 // فیلترِ بازه‌ی قیمتی: هر کدوم از حداقل/حداکثر که خالی باشه نادیده گرفته می‌شه.
@@ -2424,7 +2460,7 @@ function renderManual(){
 
   blockWrapEl.classList.add('hidden'); resultsWrapEl.classList.remove('hidden');
   const active = allListings.filter(l => !l.archived);
-  const items = groupListings(active.filter(l => l.zone === manualZone && l.block === manualBlock))
+  const items = groupListings(active.filter(l => l.zone === manualZone && l.block === manualBlock)).filter(matchesTags)
     .sort((a,b) => (a.price ?? Infinity) - (b.price ?? Infinity));
   document.getElementById('manualList').innerHTML = items.length
     ? items.map(listingCardHtml).join('')
@@ -2528,6 +2564,43 @@ function splitIntoRecords(rawText){
 
 // ردیف‌های ایموجی/علامت (مثل 🟩🟩🟩) که فقط جداکننده‌ی بین آگهی‌ها هستند، از ابتدا و انتهای
 // متن نمایشیِ هر آگهی برداشته می‌شوند تا آگهی‌ها قاطی نشوند؛ خطوط وسط آگهی دست‌نخورده می‌مانند.
+// ---------------------------------------------------------------------
+// برچسب‌های آگهی (از روی متنِ خودِ آگهی). مخفف‌ها طبقِ توضیحِ کاربر: «ت» بعد از وام/ورودی/عرصه یعنی
+// «تسویه»، ولی «ت» کنارِ قیمت یعنی «تومان» — برای همین «ت» فقط اون‌جا که پشتِ کلمه‌ی وام/ورودی
+// می‌آد معنی‌دار حساب می‌شه، و برچسبِ «ورودی تسویه» فقط وقتی داده می‌شه که «ت» (یا «تسویه»)
+// بلافاصله بعدِ «ورودی» بیاد، نه وقتی یه عدد بینشون هست (مثل «ورودی 300 ت» = ۳۰۰ تومان).
+// «وام به‌روز» و «تخلیه به‌روز» هم «وام/تخلیه + ب روز / به روز» هستن.
+// ---------------------------------------------------------------------
+const NO_LOAN_RE = /(?:بدون|بی|فاقد)\s*وام|وام\s*ندار/;
+const TAG_DEFS = [
+  { id: 'loan',          label: 'وام‌دار',        re: /وام/, not: NO_LOAN_RE },
+  { id: 'loan_current',  label: 'وام به‌روز',     re: /وام\s*(?:ب\s*روز|به\s*روز)/, not: NO_LOAN_RE },
+  { id: 'no_loan',       label: 'بدون وام',       re: NO_LOAN_RE },
+  { id: 'entry_settled', label: 'ورودی تسویه',    re: /ورودی\s*(?:ت(?![آ-ی])|تسویه)/ },
+  { id: 'guarantor',     label: 'ضامن',           re: /ضامن/ },
+  { id: 'vacant',        label: 'تخلیه',          re: /تخلیه/ },
+  { id: 'vacant_now',    label: 'تخلیه به‌روز',   re: /تخلیه\s*(?:ب\s*روز|به\s*روز|فوری)/ },
+  { id: 'docs_named',    label: 'مدارک به نام',   re: /مدارک\s*(?:ب|به)\s*نام/ },
+  { id: 'land',          label: 'عرصه',           re: /عرصه/ },
+  { id: 'full',          label: 'فول',            re: /(?<![آ-ی])فول(?![آ-ی])/ },
+  { id: 'view',          label: 'ویو',            re: /ویو/ },
+  { id: 'notary',        label: 'محضر',           re: /محضر/ },
+];
+
+// شناسه‌ی برچسب‌های یه متن. «وام به‌روز» حتماً «وام‌دار» هم هست و «تخلیه به‌روز» «تخلیه» هم.
+function extractTags(text){
+  const t = normalizeNumbers(normalizeChars(text || ''));
+  return TAG_DEFS.filter(d => d.re.test(t) && !(d.not && d.not.test(t))).map(d => d.id);
+}
+
+// برچسب‌هایی که نشون داده می‌شن: اگه «وام به‌روز» هست «وام‌دار» جدا نشون داده نمی‌شه (و مشابهش تخلیه)
+function displayTags(ids){
+  const has = new Set(ids || []);
+  return TAG_DEFS.filter(d => has.has(d.id)
+    && !(d.id === 'loan' && has.has('loan_current'))
+    && !(d.id === 'vacant' && has.has('vacant_now')));
+}
+
 function trimSeparatorLines(lines){
   const hasContent = l => /[\p{L}\p{N}]/u.test(l);
   let a = 0, b = lines.length;
@@ -2551,7 +2624,7 @@ function parsePrice(text){
 // هیچ قیمتِ دیگه‌ای (x/xxx یا ۴-۵ رقمی) توی آگهی پیدا نشده باشه، و آخرین خطِ تک‌عددی انتخاب می‌شه.
 function parseLonePrice(lines){
   for (let i = lines.length - 1; i >= 0; i--){
-    const m = lines[i].trim().match(/^(\d{1,2})$/);
+    const m = lines[i].trim().match(/^(\d{1,2})\s*(?:تومان|ت|میلیارد)?$/);
     if (m && +m[1] > 0) return { price: +m[1]*1000, priceText: m[1] };
   }
   return { price: null, priceText: null };
@@ -2597,7 +2670,7 @@ function extractAds(rawText){
     let direction = null;
     for (const [re,label] of dirMap){ if (re.test(joined)){ direction = label; break; } }
     const zoneVal = isKuhsar ? 'kuhsar' : (isGhadirOnly ? 'ghadir' : +zm[1]);
-    ads.push({ zone: zoneVal, block: bm?+bm[1]:null, floor, price, priceText, phone: phm?phm[1]:null, direction, raw: rec.raw, _blockIndex: rec.blockIndex });
+    ads.push({ zone: zoneVal, block: bm?+bm[1]:null, floor, price, priceText, phone: phm?phm[1]:null, direction, raw: rec.raw, tags: extractTags(joined), _blockIndex: rec.blockIndex });
   }
 
   // بعضی وقتا توی یه پیام چند تا فایل پشتِ‌سرِهم (با مرزِ «زون»، نه خط خالی) نوشته می‌شن و فقط
@@ -2994,6 +3067,7 @@ function listingCardHtml(l){
       <div class="meta">${floorLabel(l.floor)?('طبقه '+floorLabel(l.floor)+' · '):''}${esc(l.direction||'')}</div>
       ${price ? `<div class="price">💰 ${esc(price)}</div>` : ''}
       ${cmpBadgeHtml(l)}
+      ${tagsHtml(l)}
       ${l.phone ? `<div class="phone">📞 ${esc(l.phone)}</div>` : ''}
       <div class="time">${relTime(l.createdAt)}</div></div></div>`;
 }
@@ -3304,7 +3378,7 @@ function renderArchive(){
 function render(){
   const active = allListings.filter(l=>!l.archived);
   // اکسپلور فقط مالِ ۵ زونِ فاز ۱۱ است؛ کوهسار و غدیر هرکدوم بخشِ مخصوصِ خودشون رو دارن (renderGhadir).
-  const visible = groupListings(active).filter(l => l.zone !== 'ghadir' && l.zone !== 'kuhsar' && (!zoneFilter || String(l.zone) === zoneFilter) && matchesSearch(l) && inPriceRange(l));
+  const visible = groupListings(active).filter(l => l.zone !== 'ghadir' && l.zone !== 'kuhsar' && (!zoneFilter || String(l.zone) === zoneFilter) && matchesSearch(l) && inPriceRange(l) && matchesTags(l));
   // ترتیب اکسپلور طبق دکمه‌ی فعال: بلوک (پیش‌فرض، زون سپس شماره بلوک)، قیمت (ارزان به گران) یا زمان (جدیدترین اول)
   let sorted;
   if (sortMode === 'price'){
@@ -3615,6 +3689,8 @@ async function uploadListingMedia(photoFile, videoFile){
   return extra;
 }
 
+renderTagFilters();
+
 document.getElementById('filters').addEventListener('click', (e) => {
   const chip = e.target.closest('.chip'); if (!chip) return;
   document.querySelectorAll('#filters .chip').forEach(c=>c.classList.remove('on'));
@@ -3710,7 +3786,7 @@ async function fetchBaleListings(){
         zone: f.zone, block: f.block, floor: f.floor, price: f.price, priceText: f.priceText,
         phone: f.phone, direction: f.direction, raw: f.raw, archived: false,
         createdAt: f.createdAt || new Date().toISOString(),
-        source: 'bale', sourceChatTitle: f.sourceChatTitle || null, priceDrop: f.priceDrop || null,
+        source: 'bale', sourceChatTitle: f.sourceChatTitle || null, priceDrop: f.priceDrop || null, tags: Array.isArray(f.tags) ? f.tags : null,
       };
     });
     mergeListingSources();

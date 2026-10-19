@@ -126,5 +126,25 @@ assert(findPriceDrop(unit({ price: 6800 }), [unit({ price: 6500 }), unit({ price
 assert(findPriceDrop(unit({ price: 6000 }), [unit({ price: 7000 }), unit({ price: 6500, priceText: '6/500' })]).from === 6500, 'مبنا کمترین قیمتِ قبلیه');
 assert(findPriceDrop(unit({ price: null }), [unit()]) === null, 'آگهیِ بدونِ قیمت');
 
+// ---- برچسب‌ها (طبقِ توضیحِ کاربر: «ت» پشتِ وام/ورودی = تسویه؛ «ت» کنارِ قیمت = تومان) ----
+const { extractTags, displayTags } = require('./ads-parser');
+const tagSet = (t) => extractTags(t).sort().join(',');
+const sorted = (...a) => a.sort().join(',');
+const tg = extractAds(multi.replace('ط ۱۱ ش غ\nفول تمیز ویودار', 'ط ۱۱ ش غ\nفول تمیز ویودار\nمشاعات لوکیشن عالی\nوام ورودی ت\nتخلیه ب روز'), { sharedPhone: true });
+assert(tagSet(tg[0].raw) === sorted('loan', 'entry_settled', 'vacant', 'vacant_now', 'docs_named', 'full', 'view'), 'برچسب‌های آگهی اول: ' + tagSet(tg[0].raw));
+assert(JSON.stringify(tg[0].tags.slice().sort()) === JSON.stringify(extractTags(tg[0].raw).sort()), 'آگهی tags رو توی خودش داره');
+assert(tagSet('ضامن\nوام ت\nمدارک ب نام') === sorted('guarantor', 'loan', 'docs_named'), 'ضامن + وام ت: ' + tagSet('ضامن\nوام ت\nمدارک ب نام'));
+assert(tagSet('عرصه ت\nوام ب روز\nمدارک ب نام') === sorted('land', 'loan', 'loan_current', 'docs_named'), 'عرصه + وام ب روز');
+assert(tagSet('وام نقل ت\n۳۰ ورودی ت') === sorted('loan', 'entry_settled'), 'وام نقل ت و ورودی ت');
+assert(!extractTags('ورودی 300 ت').includes('entry_settled'), '«ورودی 300 ت» یعنی ۳۰۰ تومان، نه تسویه');
+assert(tagSet('قیمت 7500 ت') === '', '«ت» کنارِ قیمت برچسب نمی‌سازه');
+assert(tagSet('بدون وام') === 'no_loan' && !extractTags('وام ندارد').includes('loan'), 'بدونِ وام، وام‌دار نیست');
+assert(tagSet('فولاد') === '' && tagSet('فروش') === '', '«فول» فقط به‌صورتِ کلمه‌ی مستقل');
+assert(tagSet('تخلیه') === 'vacant' && tagSet('تخلیه فوری') === sorted('vacant', 'vacant_now'), 'تخلیه‌ی ساده در برابرِ به‌روز');
+assert(displayTags(['loan', 'loan_current', 'vacant', 'vacant_now']).map(d => d.label).join('|') === 'وام به‌روز|تخلیه به‌روز', 'نمایشِ برچسبِ دقیق‌تر به‌جای کلی');
+// قیمتِ تک‌عدد با «ت» (تومان)
+const lp = extractAds('زون 3\nبلوک 12\n8 ت');
+assert(lp[0].price === 8000 && lp[0].priceText === '8', 'عددِ تنها + «ت» = ۸ میلیارد تومان: ' + JSON.stringify(lp[0]));
+
 console.log(failures ? `\n${failures} خطا` : '\nهمه چی درسته ✅');
 process.exit(failures ? 1 : 0);
