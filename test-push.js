@@ -28,6 +28,14 @@ const ad = (o) => Object.assign({ zone: 3, block: 12, floor: 2, price: 5200, dir
     assert.strictEqual(p.body.split('\n').length, 4);
     assert.ok(p.body.endsWith('و 2 آگهیِ دیگه'));
   });
+  await t('اعلانِ مچِ خریدار: یک مچ با شماره، چندتا با شمارش', () => {
+    const one = push.buildMatchPayload([{ ad: ad(), buyers: [{ phone: '0912' }] }]);
+    assert.strictEqual(one.type, 'match');
+    assert.ok(one.body.includes('0912') && one.body.includes('بلوک 12'));
+    const many = push.buildMatchPayload([{ ad: ad(), buyers: [{ phone: 'a' }, { phone: 'b' }] }]);
+    assert.ok(many.body.includes('2 خریدار'));
+    assert.strictEqual(push.buildMatchPayload([]), null);
+  });
   await t('پیامِ FCM فقط data داره و همه‌ی مقدارها رشته‌اند', () => {
     const m = push.toFcmMessage(push.buildNewAdsPayload([ad()]), ['t1']);
     assert.ok(!m.notification);

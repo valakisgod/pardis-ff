@@ -8,8 +8,9 @@
 'use strict';
 
 const admin = require('firebase-admin');
-const { extractAds, dedupKey } = require('./ads-parser');
-const { notifyNewAds, notifyDueAlarms } = require('./push');
+const crypto = require('crypto');
+const { extractAds, extractBuyerRequests, dedupKey } = require('./ads-parser');
+const { notifyNewAds, notifyMatches, notifyDueAlarms } = require('./push');
 
 const BOT_TOKEN = process.env.BALE_BOT_TOKEN;
 const API_BASE = `https://tapi.bale.ai/bot${BOT_TOKEN}`;
@@ -31,6 +32,7 @@ admin.initializeApp({ credential: admin.credential.cert(serviceAccount) });
 const db = admin.firestore();
 const metaRef = db.collection('_meta').doc('bale_bot');
 const listingsCol = db.collection('bale_listings');
+const buyersCol = db.collection('buyers');
 
 async function getOffset() {
   const snap = await metaRef.get();
@@ -87,9 +89,25 @@ async function processMessage(msg, newAds) {
     return 0;
   }
 
+  // پیام‌های «خریدار/خواهان» آگهیِ فروش نیستن؛ توی مجموعه‌ی buyers (همونی که برنامه‌ی وب می‌خونه)
+  // ذخیره می‌شن. شناسه از روی شماره+متن ساخته می‌شه تا یه پیامِ تکراری (چند گروه / فوروارد) دوباره
+  // ثبت نشه.
+  let buyerCount = 0;
+  for (const b of extractBuyerRequests(text)) {
+    const id = 'bale_' + crypto.createHash('sha1').update((b.phone || '') + '|' + b.text.replace(/\s+/g, ' ')).digest('hex').slice(0, 24);
+    const ref = buyersCol.doc(id);
+    if ((await ref.get()).exists) continue;
+    await ref.set({
+      text: b.text, phone: b.phone, criteria: b.criteria, source: 'bale',
+      sourceChatTitle: chat.title || null, createdAt: new Date().toISOString(),
+    });
+    buyerCount++;
+  }
+  if (buyerCount) console.log(`${buyerCount} خریدار از گروه «${chat.title || chat.id}» ذخیره شد.`);
+
   const ads = extractAds(text, { sharedPhone: true });
   if (!ads.length) {
-    console.log(`بدونِ آگهی: پیامی توی «${chat.title || chat.id}» (${text.length} نویسه) آگهیِ قابلِ‌تشخیص نداشت.`);
+    if (!buyerCount) console.log(`بدونِ آگهی: پیامی توی «${chat.title || chat.id}» (${text.length} نویسه) آگهیِ قابلِ‌تشخیص نداشت.`);
     return 0;
   }
 
@@ -136,6 +154,10 @@ async function processMessage(msg, newAds) {
       const r = await notifyNewAds(messaging, db, newAds);
       if (newAds.length) console.log('اعلانِ آگهیِ جدید:', JSON.stringify(r));
     } catch (e) { console.error('ارسالِ اعلانِ آگهی ناموفق بود:', e.message); }
+    try {
+      const r = await notifyMatches(messaging, db, newAds, Date.now());
+      if (!r.skipped) console.log('اعلانِ مچِ خریدار:', JSON.stringify(r));
+    } catch (e) { console.error('ارسالِ اعلانِ مچِ خریدار ناموفق بود:', e.message); }
     try {
       const r = await notifyDueAlarms(messaging, db, Date.now());
       if (r.due) console.log('اعلانِ آلارم:', JSON.stringify(r));

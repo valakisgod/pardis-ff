@@ -156,4 +156,53 @@ function dedupKey(l) {
   return [l.zone, l.block, l.floor ?? 'x', l.price ?? 'x', l.phone ?? 'x'].join('|');
 }
 
-module.exports = { extractAds, splitIntoRecords, parsePrice, dedupKey };
+// ----------------------------------------------------------------------
+// خریدارها: پیام‌هایی که کلمه‌ی خریدار/خواهان/... دارن، آگهیِ فروش نیستن؛ جدا ذخیره می‌شن
+// (مجموعه‌ی buyers، همون که برنامه‌ی وب می‌خونه) و برای تطبیقِ خودکار با آگهی‌های تازه
+// معیارهایی ازشون درمیاد: زون(ها) و سقفِ قیمت. فقط همین دو تا «شرطِ سخت» هستن؛ چیزی که
+// مشخص نشده، یعنی «فرقی نمی‌کنه».
+// ----------------------------------------------------------------------
+function extractBuyerRequests(rawText) {
+  const requests = [];
+  for (const rec of splitIntoRecords(rawText)) {
+    const joined = rec.lines.join(' ');
+    if (!buyerRe.test(joined)) continue;
+    const phm = joined.match(phoneRe);
+    requests.push({ text: rec.raw, phone: phm ? phm[1] : null, criteria: buyerCriteria(rec.raw) });
+  }
+  return requests;
+}
+
+function buyerCriteria(text) {
+  const norm = normalizeNumbers(normalizeChars(text || ''));
+  // «فاز ۲» و مشابهش نباید به‌عنوان «زون ۲» خونده بشه
+  const noPhase = norm.replace(phaseAnyRe, ' ');
+  phaseAnyRe.lastIndex = 0;
+  const zones = new Set();
+  for (const m of noPhase.matchAll(new RegExp(zoneRe.source, 'gi'))) zones.add(m[1]);
+  if (kuhsarRe.test(norm)) zones.add('kuhsar');
+  if (ghadirOnlyRe.test(norm) && !kuhsarRe.test(norm)) zones.add('ghadir');
+
+  // سقفِ قیمت: «تا ۷» / «حداکثر ۶/۵» / «بودجه ۸» (میلیارد) یا یه قیمتِ معمولی توی متن
+  let maxPrice = null;
+  const upTo = norm.match(/(?:تا|حداکثر|سقف|بودجه)\s*:?\s*(\d{1,2})(?:\s*[/.]\s*(\d{1,3}))?(?!\d)/);
+  if (upTo) maxPrice = +upTo[1] * 1000 + (upTo[2] ? parseInt(upTo[2].padEnd(3, '0')) : 0);
+  else {
+    const { price } = parsePrice(norm);
+    if (price != null) maxPrice = price;
+  }
+  return { zones: [...zones], maxPrice };
+}
+
+// آگهی با معیارِ خریدار می‌خونه؟ خریدارِ بدونِ هیچ معیار هیچ‌وقت مچ نمی‌شه (وگرنه همه‌چی مچ می‌شد).
+function adMatchesBuyer(ad, criteria) {
+  if (!criteria) return false;
+  const zones = criteria.zones || [];
+  const hasMax = criteria.maxPrice != null;
+  if (!zones.length && !hasMax) return false;
+  if (zones.length && !zones.includes(String(ad.zone))) return false;
+  if (hasMax && ad.price != null && ad.price > criteria.maxPrice) return false;
+  return true;
+}
+
+module.exports = { extractAds, splitIntoRecords, parsePrice, dedupKey, extractBuyerRequests, buyerCriteria, adMatchesBuyer };

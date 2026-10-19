@@ -18,6 +18,7 @@ function run({ store, updates, tokensFail }) {
     const snap = (p) => ({ id: p.split('/').pop(), exists: store[p] !== undefined, data: () => store[p] });
     const colApi = (name) => ({
       doc: (id) => ({ get: async () => snap(name + '/' + id), set: async (d, o) => { store[name + '/' + id] = o && o.merge ? Object.assign({}, store[name + '/' + id], d) : d; }, delete: async () => { delete store[name + '/' + id]; } }),
+      get: async () => ({ docs: Object.keys(store).filter(k => k.startsWith(name + '/')).map(snap) }),
       where: (f, op, v) => ({ limit: () => ({ get: async () => ({ docs: Object.keys(store).filter(k => k.startsWith(name + '/') && store[k][f] === v).map(snap) }) }), get: async () => ({ docs: Object.keys(store).filter(k => k.startsWith(name + '/') && store[k][f] === v).map(snap) }) }),
     });
     const db = { collection: colApi, batch: () => { const ops = []; return { set: (ref, d, o) => ops.push([ref, d, o]), commit: async () => { for (const [ref, d, o] of ops) await ref.set(d, o); } }; } };
@@ -87,6 +88,27 @@ const AD2 = 'زون 4\nبلوک 7\nطبقه 7 ش ش\nقیمت 7800\n09194101244'
     const store = { 'push_tokens/A': { ads: true } };
     const r = await run({ store, updates: [msg(1, 10, 'سلام، حالتون چطوره؟'), { update_id: 11, message: { message_id: 2, chat: { id: 5, type: 'private' }, text: AD1 } }] });
     assert(r.sent.length === 0 && !Object.keys(store).some(k => k.startsWith('bale_listings/')), 'نه ذخیره نه اعلان');
+  }
+  // ۷) پیامِ «خریدار»: توی buyers ذخیره بشه (نه آگهی)، بار دوم تکراری نشه، و آگهیِ تازه با خریدارِ مناسب مچ و اعلان بشه
+  {
+    const BUYER = 'خریدار زون 3 تا 6/500\n09125550000';
+    const store = { 'push_tokens/A': { ads: true } };
+    const r1 = await run({ store, updates: [msg(1, 10, BUYER)] });
+    const buyerKeys = () => Object.keys(store).filter(k => k.startsWith('buyers/'));
+    assert(buyerKeys().length === 1, 'یک خریدار ذخیره شود');
+    const b = store[buyerKeys()[0]];
+    assert(b.phone === '09125550000' && b.criteria.zones.join() === '3' && b.criteria.maxPrice === 6500 && b.source === 'bale', 'معیارِ خریدار: ' + JSON.stringify(b));
+    assert(!Object.keys(store).some(k => k.startsWith('bale_listings/')), 'خریدار نباید آگهی حساب بشه');
+    assert(r1.sent.length === 0, 'خودِ ثبتِ خریدار اعلان نسازد');
+    await run({ store, updates: [msg(2, 11, BUYER, -300)] });
+    assert(buyerKeys().length === 1, 'همان خریدار از گروهِ دیگر دوباره ثبت نشود');
+    // آگهیِ هم‌زون و زیرِ سقف → مچ
+    const r2 = await run({ store, updates: [msg(3, 12, 'زون 3\nبلوک 12\nقیمت 5200\n09121234567')] });
+    const match = r2.sent.find(m => m.data.type === 'match');
+    assert(match && match.data.body.includes('09125550000'), 'اعلانِ مچِ خریدار برود: ' + JSON.stringify(r2.sent.map(m => m.data)));
+    // آگهیِ بالاتر از سقف یا زونِ دیگه → مچ نه
+    const r3 = await run({ store, updates: [msg(4, 13, 'زون 3\nبلوک 20\nقیمت 9000\n09121234568'), msg(5, 14, 'زون 4\nبلوک 21\nقیمت 5000\n09121234569')] });
+    assert(!r3.sent.some(m => m.data.type === 'match'), 'گرون‌تر از سقف / زونِ دیگه مچ نشود');
   }
   console.log(`${n} بررسی، ${failures} خطا`);
   process.exit(failures ? 1 : 0);

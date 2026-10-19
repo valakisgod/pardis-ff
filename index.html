@@ -2634,23 +2634,27 @@ function extractBuyerRequests(rawText){
 // تطبیقِ خودکار: متنِ خامِ هر «خواهان» رو عیناً مثلِ یه آگهی می‌خونه تا زون و سقفِ قیمتِ
 // موردنظرش رو (اگه توی متنش اومده باشه) حدس بزنه — چون فعلاً ساختاری ذخیره نشده، فقط متنه.
 function buyerCriteria(b){
+  // خریدارهایی که رباتِ بله ذخیره کرده معیارشون (zones/maxPrice) از قبل توی خودِ سند هست
+  if (b.criteria && Array.isArray(b.criteria.zones)){
+    return { zones: b.criteria.zones.map(String), maxPrice: b.criteria.maxPrice == null ? null : b.criteria.maxPrice };
+  }
   const joined = b.text || '';
   const isKuhsar = kuhsarRe.test(joined);
   const isGhadirOnly = !isKuhsar && ghadirOnlyRe.test(joined);
   const zm = joined.match(zoneRe);
   const zone = isKuhsar ? 'kuhsar' : (isGhadirOnly ? 'ghadir' : (zm ? +zm[1] : null));
   const { price } = parsePrice(joined);
-  return { zone, maxPrice: price };
+  return { zones: zone === null ? [] : [String(zone)], maxPrice: price };
 }
 
-// فایلِ تازه‌ثبت‌شده رو با خواهان‌های ذخیره‌شده مقایسه می‌کنه: اگه خواهان زونی مشخص کرده باشه باید
-// با زونِ فایل یکی باشه، و اگه سقفِ قیمتی مشخص کرده باشه، قیمتِ فایل نباید ازش بیشتر باشه.
+// فایلِ تازه‌ثبت‌شده رو با خواهان‌های ذخیره‌شده مقایسه می‌کنه: اگه خواهان زون(هایی) مشخص کرده باشه
+// باید با زونِ فایل یکی باشه، و اگه سقفِ قیمتی مشخص کرده باشه، قیمتِ فایل نباید ازش بیشتر باشه.
 // خواهانی که هیچ زون/قیمتی توی متنش نیست، برای جلوگیری از شلوغیِ بی‌فایده نادیده گرفته می‌شه.
 function findMatchingBuyers(ad){
   return allBuyers.filter(b => {
     const c = buyerCriteria(b);
-    if (c.zone === null && c.maxPrice === null) return false;
-    if (c.zone !== null && String(c.zone) !== String(ad.zone)) return false;
+    if (!c.zones.length && c.maxPrice === null) return false;
+    if (c.zones.length && !c.zones.includes(String(ad.zone))) return false;
     if (c.maxPrice != null && ad.price != null && ad.price > c.maxPrice) return false;
     return true;
   });
@@ -2977,6 +2981,15 @@ function buyerSnippet(text){
   return firstLine.length > 60 ? firstLine.slice(0, 60) + '…' : firstLine;
 }
 
+// خلاصه‌ی معیارهای خریدار (زون‌ها و سقفِ قیمت) کنارِ کارتش، اگه از متنش درآمده باشه
+function buyerCriteriaLine(b){
+  const c = buyerCriteria(b);
+  const parts = [];
+  if (c.zones.length) parts.push(c.zones.map(z => zoneLabel(z === 'kuhsar' || z === 'ghadir' ? z : +z)).join('، '));
+  if (c.maxPrice != null) parts.push('تا ' + c.maxPrice.toLocaleString('en-US'));
+  return parts.length ? `<div class="meta" style="color:var(--brass-400);">🎯 ${esc(parts.join(' · '))}</div>` : '';
+}
+
 function buyerCardHtml(b){
   const saved = savedBuyerIds.has(b.id);
   return `<div class="u-card" onclick="showBuyerDetail('${esc(b.id)}')">
@@ -2984,6 +2997,7 @@ function buyerCardHtml(b){
       <div class="u-card-body">
       <h3>${b.phone ? esc(b.phone) : 'بدون شماره تماس'}</h3>
       <div class="meta">${esc(buyerSnippet(b.text))}</div>
+      ${buyerCriteriaLine(b)}
       <div class="time">${relTime(b.createdAt)}</div></div></div>`;
 }
 

@@ -77,6 +77,24 @@ function buildAlarmPayload(alarm) {
   };
 }
 
+// مچ‌های «آگهیِ تازه ↔ خریدار»: matches = [{ ad, buyers: [{phone,...}] }] → یک اعلانِ جمع‌وجور.
+function buildMatchPayload(matches) {
+  if (!matches.length) return null;
+  const line = m => {
+    const who = m.buyers.length === 1 ? (m.buyers[0].phone || 'بدون شماره') : `${m.buyers.length} خریدار`;
+    return `${describeAd(m.ad)} ← ${who}`;
+  };
+  const shown = matches.slice(0, 3).map(line);
+  const rest = matches.length - shown.length;
+  return {
+    type: 'match',
+    title: matches.length === 1 ? '🙋 یک فایل به درد خریدار می‌خوره' : `🙋 ${matches.length} فایل به درد خریدار می‌خوره`,
+    body: shown.join('\n') + (rest > 0 ? `\nو ${rest} موردِ دیگه` : ''),
+    tag: 'pardis-matches',
+    url: APP_URL,
+  };
+}
+
 function toFcmMessage(payload, tokens) {
   // فقط «data» می‌فرستیم (بدونِ کلیدِ notification) تا خودِ service worker اعلان رو بسازه و
   // بتونه لرزش/ماندگاریِ آلارم رو تنظیم کنه. همه‌ی مقدارها باید رشته باشن.
@@ -121,6 +139,29 @@ async function notifyNewAds(messaging, db, newAds) {
   return sendToTokens(messaging, db, docs, payload);
 }
 
+// آگهی‌های تازه رو با خریدارهای «فعال» (تا ۳۰ روزِ اخیر) تطبیق می‌ده؛ تطبیق با adMatchesBuyer.
+// خریدارِ بدونِ criteria (مثلاً از برنامه‌ی وب) از روی متنش معیار می‌گیره.
+const BUYER_MAX_AGE_MS = 30 * 24 * 60 * 60 * 1000;
+async function notifyMatches(messaging, db, newAds, nowMs) {
+  if (!newAds.length) return { ok: 0, dead: 0, skipped: 'no-ads' };
+  const { buyerCriteria, adMatchesBuyer } = require('./ads-parser');
+  const snap = await db.collection('buyers').get();
+  const buyers = snap.docs.map(d => d.data()).filter(b => {
+    const t = Date.parse(b.createdAt);
+    return isNaN(t) || nowMs - t <= BUYER_MAX_AGE_MS;
+  }).map(b => ({ phone: b.phone || null, criteria: b.criteria || buyerCriteria(b.text) }));
+  const matches = [];
+  for (const ad of newAds) {
+    const hit = buyers.filter(b => adMatchesBuyer(ad, b.criteria));
+    if (hit.length) matches.push({ ad, buyers: hit });
+  }
+  const payload = buildMatchPayload(matches);
+  if (!payload) return { ok: 0, dead: 0, skipped: 'no-matches' };
+  const docs = await getTokenDocs(db, 'ads');
+  if (!docs.length) return { ok: 0, dead: 0, skipped: 'no-tokens' };
+  return sendToTokens(messaging, db, docs, payload);
+}
+
 async function notifyDueAlarms(messaging, db, nowMs) {
   const alarmsSnap = await db.collection('events').doc('alarms').get();
   const items = alarmsSnap.exists ? (alarmsSnap.data().items || []) : [];
@@ -141,6 +182,6 @@ async function notifyDueAlarms(messaging, db, nowMs) {
 }
 
 module.exports = {
-  APP_URL, describeAd, buildNewAdsPayload, dueAlarms, buildAlarmPayload, toFcmMessage,
+  APP_URL, describeAd, buildNewAdsPayload, buildMatchPayload, notifyMatches, dueAlarms, buildAlarmPayload, toFcmMessage,
   sendToTokens, notifyNewAds, notifyDueAlarms,
 };

@@ -99,5 +99,17 @@ assert(tp.find(a => a.block === 20).phone === null, 'با دو شمارهٔ مت
 const both = extractAds(`زون 3\nبلوک 12\n9\n7/350`);
 assert(both[0].priceText === '7/350', 'قیمتِ x/xxx باید بر عددِ تنها اولویت داشته باشه');
 
+// ---- خریدار: استخراجِ معیار و تطبیق ----
+const { extractBuyerRequests, buyerCriteria, adMatchesBuyer } = require('./ads-parser');
+const br = extractBuyerRequests(multi);
+assert(br.length === 1 && br[0].phone === '09193929104', 'سرِ پیامِ «خریدار ۵ مورد…» باید یه خریدار باشه، نه آگهی');
+assert(br[0].criteria.zones.length === 0 && br[0].criteria.maxPrice === null, '«فاز11» نباید زون حساب بشه: ' + JSON.stringify(br[0].criteria));
+assert(!adMatchesBuyer(m[0], br[0].criteria), 'خریدارِ بدونِ معیار هیچ‌چیز رو مچ نکنه');
+const c1 = buyerCriteria('خریدار زون ۲ و ز ۳ حداکثر ۶/۵ میلیارد');
+assert(c1.zones.sort().join() === '2,3' && c1.maxPrice === 6500, 'چند زون و سقفِ قیمت: ' + JSON.stringify(c1));
+assert(adMatchesBuyer({ zone: 3, price: 6000 }, c1) && !adMatchesBuyer({ zone: 4, price: 6000 }, c1) && !adMatchesBuyer({ zone: 3, price: 7000 }, c1), 'قانونِ تطبیق (زون و سقف)');
+assert(adMatchesBuyer({ zone: 2, price: null }, c1), 'آگهیِ بدونِ قیمت فقط با زون مچ بشه');
+assert(buyerCriteria('خریدار فاز ۲ و ۳').zones.length === 0, '«فاز ۲» زون نیست');
+
 console.log(failures ? `\n${failures} خطا` : '\nهمه چی درسته ✅');
 process.exit(failures ? 1 : 0);
