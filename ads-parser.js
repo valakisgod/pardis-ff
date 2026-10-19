@@ -48,7 +48,7 @@ const dirMap = [
 // بلافاصله بعدِ «ورودی» بیاد، نه وقتی یه عدد بینشون هست (مثل «ورودی 300 ت» = ۳۰۰ تومان).
 // «وام به‌روز» و «تخلیه به‌روز» هم «وام/تخلیه + ب روز / به روز» هستن.
 // ---------------------------------------------------------------------
-const NO_LOAN_RE = /(?:بدون|بی|فاقد)\s*وام|وام\s*ندار/;
+const NO_LOAN_RE = /(?<![آ-ی])(?:بدون|بی|فاقد)\s*وام|وام\s*ندار/;
 const TAG_DEFS = [
   { id: 'loan',          label: 'وام‌دار',        re: /وام/, not: NO_LOAN_RE },
   { id: 'loan_current',  label: 'وام به‌روز',     re: /وام\s*(?:ب\s*روز|به\s*روز)/, not: NO_LOAN_RE },
@@ -194,6 +194,42 @@ function dedupKey(l) {
 }
 
 // ----------------------------------------------------------------------
+// فیلترهای سفارشیِ اعلان («زون ۳، زیر ۷ میلیارد، وام‌دار»). قانون = { zones, minPrice, maxPrice, tags }
+// (قیمت‌ها به میلیون تومان). همه‌ی شرط‌های پرشده باید برقرار باشن؛ قانونِ کاملاً خالی هیچ‌چیز رو
+// مچ نمی‌کنه. اگه حداقل/حداکثر قیمت گذاشته شده باشه، آگهیِ بدونِ قیمت مچ نمی‌شه.
+// ----------------------------------------------------------------------
+function adMatchesRule(ad, rule) {
+  if (!rule) return false;
+  const zones = (rule.zones || []).map(String);
+  const tags = rule.tags || [];
+  const hasMin = rule.minPrice != null, hasMax = rule.maxPrice != null;
+  if (!zones.length && !hasMin && !hasMax && !tags.length) return false;
+  if (zones.length && !zones.includes(String(ad.zone))) return false;
+  if ((hasMin || hasMax) && ad.price == null) return false;
+  if (hasMin && ad.price < rule.minPrice) return false;
+  if (hasMax && ad.price > rule.maxPrice) return false;
+  const have = new Set(ad.tags || []);
+  return tags.every(t => have.has(t));
+}
+
+function fmtMillions(n) {
+  const r = Math.round(n);
+  return r >= 1000 ? Math.floor(r / 1000) + '/' + String(r % 1000).padStart(3, '0') : String(r);
+}
+
+function describeRule(rule) {
+  if (rule.name) return rule.name;
+  const parts = [];
+  const zones = (rule.zones || []).map(String);
+  if (zones.length) parts.push(zones.map(z => z === 'kuhsar' ? 'کوهسار' : z === 'ghadir' ? 'غدیر' : 'زون ' + z).join('، '));
+  if (rule.minPrice != null && rule.maxPrice != null) parts.push(`${fmtMillions(rule.minPrice)} تا ${fmtMillions(rule.maxPrice)}`);
+  else if (rule.maxPrice != null) parts.push('تا ' + fmtMillions(rule.maxPrice));
+  else if (rule.minPrice != null) parts.push('از ' + fmtMillions(rule.minPrice));
+  for (const t of rule.tags || []) { const d = TAG_DEFS.find(x => x.id === t); if (d) parts.push(d.label); }
+  return parts.join(' · ') || 'فیلتر';
+}
+
+// ----------------------------------------------------------------------
 // کاهش قیمت: یه «واحد» رو با (زون، بلوک، طبقه، جهت) می‌شناسیم — قیمت توش نیست، پس همون واحد با
 // قیمتِ جدید «یه آگهیِ دیگه برای همون واحد» حساب می‌شه. اگه قیمتِ تازه از کمترین قیمتیِ که قبلاً
 // برای همون واحد دیده شده کمتر باشه، کاهش قیمته. (کمترین، نه آخرین: تا یه فایلِ قدیمیِ دوباره‌پست‌شده
@@ -266,4 +302,4 @@ function adMatchesBuyer(ad, criteria) {
   return true;
 }
 
-module.exports = { extractAds, splitIntoRecords, parsePrice, dedupKey, extractBuyerRequests, buyerCriteria, adMatchesBuyer, sameUnit, findPriceDrop, extractTags, displayTags, TAG_DEFS };
+module.exports = { extractAds, splitIntoRecords, parsePrice, dedupKey, extractBuyerRequests, buyerCriteria, adMatchesBuyer, sameUnit, findPriceDrop, adMatchesRule, describeRule, fmtMillions, extractTags, displayTags, TAG_DEFS };

@@ -146,5 +146,30 @@ assert(displayTags(['loan', 'loan_current', 'vacant', 'vacant_now']).map(d => d.
 const lp = extractAds('زون 3\nبلوک 12\n8 ت');
 assert(lp[0].price === 8000 && lp[0].priceText === '8', 'عددِ تنها + «ت» = ۸ میلیارد تومان: ' + JSON.stringify(lp[0]));
 
+// ---- فیلترهای سفارشیِ اعلان ----
+const { adMatchesRule, describeRule, fmtMillions } = require('./ads-parser');
+const R = (o) => Object.assign({ zones: [], minPrice: null, maxPrice: null, tags: [] }, o);
+const A = (o) => Object.assign({ zone: 3, price: 6500, tags: ['loan', 'docs_named'] }, o);
+assert(adMatchesRule(A(), R({ zones: ['3'], maxPrice: 7000, tags: ['loan'] })), 'زون ۳ + زیر ۷ میلیارد + وام‌دار');
+assert(!adMatchesRule(A({ zone: 4 }), R({ zones: ['3'] })), 'زونِ دیگه');
+assert(!adMatchesRule(A({ price: 7500 }), R({ maxPrice: 7000 })), 'بالاتر از سقف');
+assert(!adMatchesRule(A({ price: 4000 }), R({ minPrice: 5000 })), 'پایین‌تر از کف');
+assert(adMatchesRule(A({ price: 5000 }), R({ minPrice: 5000, maxPrice: 5000 })), 'مرزها شاملِ خودشون‌ان');
+assert(!adMatchesRule(A({ price: null }), R({ maxPrice: 7000 })), 'قیمت‌نداشته با شرطِ قیمت مچ نمی‌شه');
+assert(adMatchesRule(A({ price: null }), R({ zones: ['3'] })), 'قیمت‌نداشته بدونِ شرطِ قیمت مچ می‌شه');
+assert(!adMatchesRule(A(), R({ tags: ['loan', 'guarantor'] })), 'همه‌ی برچسب‌ها باید باشن');
+assert(!adMatchesRule(A({ tags: undefined }), R({ tags: ['loan'] })), 'آگهیِ بدونِ برچسب');
+assert(!adMatchesRule(A(), R()) && !adMatchesRule(A(), null), 'قانونِ خالی هیچ‌چیز رو مچ نمی‌کنه');
+assert(adMatchesRule(A({ zone: 'kuhsar' }), R({ zones: ['kuhsar'] })), 'کوهسار');
+assert(describeRule(R({ zones: ['3'], maxPrice: 7000, tags: ['loan'] })) === 'زون 3 · تا 7/000 · وام‌دار', 'برچسبِ خودکار: ' + describeRule(R({ zones: ['3'], maxPrice: 7000, tags: ['loan'] })));
+assert(describeRule(R({ name: 'فیلتر من', zones: ['1'] })) === 'فیلتر من', 'نامِ دلخواه');
+assert(describeRule(R({ minPrice: 5000, maxPrice: 6250 })) === '5/000 تا 6/250', 'بازه‌ی قیمت');
+assert(fmtMillions(6250) === '6/250' && fmtMillions(950) === '950', 'قالبِ قیمت');
+
+// باگِ واقعی: «جنوبی وام» نباید «بی وام» (بدونِ وام) خونده بشه (جنوبی/غربی به «بی» ختم می‌شن)
+assert(extractTags('ط ۱ جنوبی\nوام ت').join() === 'loan', 'جنوبی وام → وام‌دار: ' + tagSet('ط ۱ جنوبی\nوام ت'));
+assert(!extractTags('غربی وام ب روز').includes('no_loan') && extractTags('غربی وام ب روز').includes('loan_current'), 'غربی وام ب روز → وام به‌روز');
+assert(extractTags('بی وام').includes('no_loan') && extractTags('بدون وام').includes('no_loan') && extractTags('فاقد وام').includes('no_loan'), '«بی وام» مستقل هنوز بدونِ وام است');
+
 console.log(failures ? `\n${failures} خطا` : '\nهمه چی درسته ✅');
 process.exit(failures ? 1 : 0);

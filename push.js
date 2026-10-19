@@ -77,6 +77,49 @@ function buildAlarmPayload(alarm) {
   };
 }
 
+// فیلترهای سفارشی: هر آگهیِ تازه با قانون‌ها مقایسه می‌شه. آگهیِ مچ‌شده با (حداقل) یک قانون با «اعلانِ
+// همون قانون» خبر داده می‌شه و دیگه توی اعلانِ عمومی/کاهش‌قیمت تکرار نمی‌شه.
+function matchRules(newAds, rules) {
+  const { adMatchesRule } = require('./ads-parser');
+  const byRule = new Map(); const matched = new Set();
+  (rules || []).forEach((rule, i) => {
+    const hit = newAds.filter(a => adMatchesRule(a, rule));
+    if (hit.length) { byRule.set(i, hit); hit.forEach(a => matched.add(a)); }
+  });
+  return { byRule, matched };
+}
+
+function buildRulePayload(rule, ads) {
+  const { describeRule } = require('./ads-parser');
+  const label = describeRule(rule);
+  const line = a => (a.priceDrop ? '📉 ' : '') + describeAd(a) + (a.priceDrop ? ` (از ${a.priceDrop.fromText})` : '');
+  const shown = ads.slice(0, 3).map(line); const rest = ads.length - shown.length;
+  return {
+    type: 'rule',
+    title: `🔔 ${label}` + (ads.length > 1 ? ` · ${ads.length} آگهی` : ''),
+    body: shown.join('\n') + (rest > 0 ? `\nو ${rest} آگهیِ دیگه` : ''),
+    tag: 'pardis-rule-' + (rule.id || label),
+    url: APP_URL,
+  };
+}
+
+async function loadRules(db) {
+  const snap = await db.collection('events').doc('alert_rules').get();
+  return snap.exists ? (snap.data().items || []) : [];
+}
+
+async function notifyRules(messaging, db, byRule, rules) {
+  if (!byRule.size) return { ok: 0, dead: 0, skipped: 'no-matches' };
+  const docs = await getTokenDocs(db, 'ads');
+  if (!docs.length) return { ok: 0, dead: 0, skipped: 'no-tokens' };
+  let ok = 0, dead = 0;
+  for (const [i, ads] of byRule) {
+    const r = await sendToTokens(messaging, db, docs, buildRulePayload(rules[i], ads));
+    ok += r.ok; dead += r.dead;
+  }
+  return { ok, dead, rules: byRule.size };
+}
+
 // کاهش قیمتِ یه واحد (ad.priceDrop = {fromText, toText}) → یک اعلانِ جمع‌وجور
 function describeUnit(ad) {
   const parts = [zoneLabel(ad.zone)];
@@ -212,6 +255,6 @@ async function notifyDueAlarms(messaging, db, nowMs) {
 }
 
 module.exports = {
-  APP_URL, describeAd, buildNewAdsPayload, buildMatchPayload, notifyMatches, buildDropPayload, notifyPriceDrops, dueAlarms, buildAlarmPayload, toFcmMessage,
+  APP_URL, describeAd, buildNewAdsPayload, buildMatchPayload, notifyMatches, buildDropPayload, notifyPriceDrops, matchRules, buildRulePayload, loadRules, notifyRules, dueAlarms, buildAlarmPayload, toFcmMessage,
   sendToTokens, notifyNewAds, notifyDueAlarms,
 };

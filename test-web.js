@@ -26,7 +26,7 @@ function load(names, ctx) {
 let failures = 0, n = 0;
 const assert = (c, m) => { n++; if (!c) { failures++; console.error('FAIL:', m); } };
 
-const ctx = load(['fsValueToJs', 'fsFieldsToObj', 'baleQueryBody', 'parseRunQuery', 'mapBaleDoc', 'mergeBale', 'lastSeenOf', 'daysSince', 'isStale', 'matchesFresh', 'staleBadgeHtml', 'timeLineHtml', 'relTime', 'tehranMidnightTimestamp', 'followUpTime', 'floorLabel', 'zoneLabel', 'followUpLabel', 'normalizeNumbers', 'normalizeChars', 'extractTags', 'displayTags', 'listingTags', 'matchesTags', 'tagsHtml', 'dedupKey', 'unitId', 'getBlockStats', 'medianOf', 'fmtMillions', 'priceVsBlock', 'cmpBadgeHtml', 'cmpDetailHtml'],
+const ctx = load(['parsePriceToMillions', 'adMatchesRule', 'describeRule', 'fsValueToJs', 'fsFieldsToObj', 'baleQueryBody', 'parseRunQuery', 'mapBaleDoc', 'mergeBale', 'lastSeenOf', 'daysSince', 'isStale', 'matchesFresh', 'staleBadgeHtml', 'timeLineHtml', 'relTime', 'tehranMidnightTimestamp', 'followUpTime', 'floorLabel', 'zoneLabel', 'followUpLabel', 'normalizeNumbers', 'normalizeChars', 'extractTags', 'displayTags', 'listingTags', 'matchesTags', 'tagsHtml', 'dedupKey', 'unitId', 'getBlockStats', 'medianOf', 'fmtMillions', 'priceVsBlock', 'cmpBadgeHtml', 'cmpDetailHtml'],
   { allListings: [], esc: x => String(x), Intl, Date, Math });
 const L = (o) => Object.assign({ id: Math.random(), zone: 3, block: 12, floor: 1, direction: 'شمالی', price: 6000, phone: '0912', createdAt: '2026-10-01T00:00:00Z' }, o);
 const setAll = (arr) => { ctx.allListings = arr; };   // آرایه‌ی تازه = کش باطل می‌شه، مثل mergeListingSources
@@ -131,6 +131,26 @@ newest = ctx.mergeBale(M, [B('a', '2026-10-19T10:00:00Z'), B('c', '2026-10-20T08
 assert(M.size === 3 && newest === '2026-10-20T08:00:00Z', 'هم‌پوشانیِ درخواست‌ها تکرار نمی‌سازه');
 newest = ctx.mergeBale(M, [], Date.parse('2026-12-31T00:00:00Z'));
 assert(M.size === 0 && newest === null, 'با گذشتِ زمان کشِ قدیمی خالی می‌شه');
+
+// ---- فیلترهای سفارشی در وب: ورودیِ قیمت، و هم‌خوانی با منطقِ ربات ----
+assert(ctx.parsePriceToMillions('') === null && ctx.parsePriceToMillions('  ') === null, 'خالی = بدونِ شرط');
+assert(ctx.parsePriceToMillions('7') === 7000 && ctx.parsePriceToMillions('۷') === 7000, '«7» = ۷ میلیارد');
+assert(ctx.parsePriceToMillions('7/5') === 7500 && ctx.parsePriceToMillions('6/250') === 6250 && ctx.parsePriceToMillions('۶/۲۵۰') === 6250, 'قالبِ x/xxx');
+assert(ctx.parsePriceToMillions('7500') === 7500 && ctx.parsePriceToMillions('950') === 950, 'عددِ میلیونی');
+assert(Number.isNaN(ctx.parsePriceToMillions('abc')) && Number.isNaN(ctx.parsePriceToMillions('7/5000')), 'ورودیِ نامعتبر');
+const bot = require('./ads-parser');
+const rulesToTry = [
+  { zones: ['3'], maxPrice: 7000, tags: ['loan'] }, { zones: [], minPrice: 5000 }, { zones: ['kuhsar'] },
+  { tags: ['loan', 'guarantor'] }, {}, { zones: ['2', '3'], minPrice: 4000, maxPrice: 6000, tags: [] }, { name: 'دلخواه', zones: ['1'] },
+];
+const adsToTry = [{ zone: 3, price: 6500, tags: ['loan'] }, { zone: 'kuhsar', price: null, tags: [] }, { zone: 2, price: 4500, tags: ['loan', 'guarantor'] }, { zone: 1, price: 9000 }];
+let parity = true;
+for (const r of rulesToTry) {
+  const full = Object.assign({ zones: [], minPrice: null, maxPrice: null, tags: [] }, r);
+  if (ctx.describeRule(full) !== bot.describeRule(full)) { parity = false; console.error('describeRule parity:', JSON.stringify(full)); }
+  for (const a of adsToTry) if (ctx.adMatchesRule(a, full) !== bot.adMatchesRule(a, full)) { parity = false; console.error('match parity:', JSON.stringify([full, a])); }
+}
+assert(parity, 'منطقِ فیلترِ وب و ربات باید دقیقاً یکی باشه');
 
 // قالبِ قیمت
 assert(ctx.fmtMillions(6250) === '6/250' && ctx.fmtMillions(8000) === '8/000' && ctx.fmtMillions(950) === '950', 'قالبِ قیمت');

@@ -162,6 +162,30 @@ const AD2 = 'زون 4\nبلوک 7\nطبقه 7 ش ش\nقیمت 7800\n09194101244'
     const r = await run({ store, updates: [msg(1, 10, 'زون 3\nبلوک 12\nقیمت 5200\n09121234567')] });
     assert(!r.sent.some(m => m.data.type === 'match'), 'خریدارِ ۴۰ روزه مچ نشه');
   }
+  // ۱۲) فیلترِ سفارشی: آگهیِ مچ‌شده فقط اعلانِ فیلتر می‌گیره (نه عمومی)، بقیه عمومی؛ کاهش قیمتِ مچ‌شده هم فقط توی اعلانِ فیلتر
+  {
+    const store = {
+      'push_tokens/A': { ads: true },
+      'events/alert_rules': { items: [{ id: 'r1', zones: ['3'], maxPrice: 7000, tags: ['loan'] }] },
+    };
+    const r = await run({ store, updates: [
+      msg(1, 10, 'زون 3\nبلوک 12\nطبقه 2 جنوبی\nوام ت\nقیمت 6500\n09121230001'),
+      msg(2, 11, 'زون 4\nبلوک 7\nطبقه 7 ش ش\nقیمت 7800\n09194101244'),
+    ] });
+    const rule = r.sent.filter(m => m.data.type === 'rule');
+    const generic = r.sent.filter(m => m.data.type === 'ad');
+    assert(rule.length === 1 && rule[0].data.title.includes('زون 3') && rule[0].data.body.includes('بلوک 12'), 'اعلانِ فیلترِ سفارشی: ' + JSON.stringify(r.sent.map(m => m.data)));
+    assert(generic.length === 1 && generic[0].data.body.includes('بلوک 7') && !generic[0].data.body.includes('بلوک 12'), 'آگهیِ مچ‌شده توی اعلانِ عمومی تکرار نشه: ' + JSON.stringify(generic.map(m => m.data)));
+    // کاهش قیمتِ واحدِ مچ‌شده: فقط اعلانِ فیلتر (با 📉)
+    const r2 = await run({ store, updates: [msg(3, 12, 'زون 3\nبلوک 12\nطبقه 2 جنوبی\nوام ت\nقیمت 6200\n09121230009', -444)] });
+    assert(r2.sent.some(m => m.data.type === 'rule' && m.data.body.includes('📉')) && !r2.sent.some(m => m.data.type === 'drop'), 'کاهشِ مچ‌شده فقط با اعلانِ فیلتر: ' + JSON.stringify(r2.sent.map(m => m.data)));
+  }
+  // ۱۳) بدونِ فیلتر یا با فیلترِ خراب، همه‌چی مثلِ قبل (عمومی) کار کنه
+  {
+    const store = { 'push_tokens/A': { ads: true }, 'events/alert_rules': { items: [{ id: 'x' }, null] } };
+    const r = await run({ store, updates: [msg(1, 10, 'زون 3\nبلوک 12\nقیمت 5200\n09121234567')] });
+    assert(r.sent.length === 1 && r.sent[0].data.type === 'ad' && r.code === 0, 'فیلترِ خالی/خراب اعلانِ عمومی رو نمی‌خوابونه: ' + r.errs.join('|'));
+  }
   console.log(`${n} بررسی، ${failures} خطا`);
   process.exit(failures ? 1 : 0);
 })();

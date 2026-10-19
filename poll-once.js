@@ -10,7 +10,7 @@
 const admin = require('firebase-admin');
 const crypto = require('crypto');
 const { extractAds, extractBuyerRequests, findPriceDrop, dedupKey } = require('./ads-parser');
-const { notifyNewAds, notifyMatches, notifyPriceDrops, notifyDueAlarms } = require('./push');
+const { notifyNewAds, notifyMatches, notifyPriceDrops, matchRules, loadRules, notifyRules, notifyDueAlarms } = require('./push');
 
 const BOT_TOKEN = process.env.BALE_BOT_TOKEN;
 const API_BASE = `https://tapi.bale.ai/bot${BOT_TOKEN}`;
@@ -195,14 +195,25 @@ async function processMessage(msg, newAds) {
 
     // اعلان‌های گوشی: خطا توی این بخش نباید ذخیره‌ی آگهی‌ها رو خراب کنه.
     const messaging = admin.messaging();
+    // فیلترهای سفارشیِ کاربر (events/alert_rules): آگهیِ مچ‌شده با اعلانِ همون فیلتر می‌آد و توی
+    // اعلانِ عمومی/کاهش‌قیمت تکرار نمی‌شه. اگه خوندنِ فیلترها خطا بده، همه‌چی مثلِ قبل (عمومی) می‌ره.
+    let rules = [], byRule = new Map(), matched = new Set();
+    if (newAds.length) {
+      try { rules = await loadRules(db); ({ byRule, matched } = matchRules(newAds, rules)); }
+      catch (e) { console.error('خواندنِ فیلترهای سفارشی ناموفق بود:', e.message); }
+    }
     try {
-      const r = await notifyNewAds(messaging, db, newAds.filter(a => !a.priceDrop));
+      const r = await notifyNewAds(messaging, db, newAds.filter(a => !a.priceDrop && !matched.has(a)));
       if (newAds.length) console.log('اعلانِ آگهیِ جدید:', JSON.stringify(r));
     } catch (e) { console.error('ارسالِ اعلانِ آگهی ناموفق بود:', e.message); }
     try {
-      const r = await notifyPriceDrops(messaging, db, newAds.filter(a => a.priceDrop));
+      const r = await notifyPriceDrops(messaging, db, newAds.filter(a => a.priceDrop && !matched.has(a)));
       if (!r.skipped) console.log('اعلانِ کاهش قیمت:', JSON.stringify(r));
     } catch (e) { console.error('ارسالِ اعلانِ کاهش قیمت ناموفق بود:', e.message); }
+    try {
+      const r = await notifyRules(messaging, db, byRule, rules);
+      if (!r.skipped) console.log('اعلانِ فیلترهای سفارشی:', JSON.stringify(r));
+    } catch (e) { console.error('ارسالِ اعلانِ فیلتر سفارشی ناموفق بود:', e.message); }
     try {
       const r = await notifyMatches(messaging, db, newAds, Date.now());
       if (!r.skipped) console.log('اعلانِ مچِ خریدار:', JSON.stringify(r));
