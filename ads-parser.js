@@ -67,8 +67,10 @@ function splitIntoRecords(rawText) {
   if (block.length) blocks.push(block);
 
   const records = [];
-  const push = cur => { if (cur.length) records.push({ lines: cur.map(x => x.n), raw: trimSeparatorLines(cur.map(x => x.o)).join('\n') }); };
+  let blockIndex = -1;
+  const push = cur => { if (cur.length) records.push({ lines: cur.map(x => x.n), raw: trimSeparatorLines(cur.map(x => x.o)).join('\n'), blockIndex }); };
   for (const b of blocks) {
+    blockIndex++;
     let current = []; let hasMarker = false;
     for (const item of b) {
       const isMarker = zoneRe.test(item.n) || phaseAnyRe.test(item.n);
@@ -89,7 +91,18 @@ function parsePrice(text) {
   return { price: null, priceText: null };
 }
 
-function extractAds(rawText) {
+// قیمتِ «تک‌عددی»: بعضی‌ها قیمت رو فقط به‌صورت یه عددِ تنها (۱ یا ۲ رقمی، به میلیارد) توی یه خط
+// می‌نویسن (مثل «8» یا «7») — یعنی ۸ یا ۷ میلیارد = ۸۰۰۰ یا ۷۰۰۰ میلیون. فقط وقتی استفاده می‌شه که
+// هیچ قیمتِ دیگه‌ای (x/xxx یا ۴-۵ رقمی) توی آگهی پیدا نشده باشه، و آخرین خطِ تک‌عددی انتخاب می‌شه.
+function parseLonePrice(lines) {
+  for (let i = lines.length - 1; i >= 0; i--) {
+    const m = lines[i].trim().match(/^(\d{1,2})$/);
+    if (m && +m[1] > 0) return { price: +m[1] * 1000, priceText: m[1] };
+  }
+  return { price: null, priceText: null };
+}
+
+function extractAds(rawText, opts = {}) {
   const records = splitIntoRecords(rawText);
   const ads = [];
   for (const rec of records) {
@@ -113,12 +126,29 @@ function extractAds(rawText) {
 
     const fm = joined.match(floorRe); const phm = joined.match(phoneRe);
     const floor = fm ? +fm[1] : (groundFloorRe.test(joined) ? 0 : null);
-    const { price, priceText } = parsePrice(joined);
+    let { price, priceText } = parsePrice(joined);
+    if (price == null) ({ price, priceText } = parseLonePrice(rec.lines));
     let direction = null;
     for (const [re, label] of dirMap) { if (re.test(joined)) { direction = label; break; } }
     const zoneVal = isKuhsar ? 'kuhsar' : (isGhadirOnly ? 'ghadir' : +zm[1]);
-    ads.push({ zone: zoneVal, block: bm ? +bm[1] : null, floor, price, priceText, phone: phm ? phm[1] : null, direction, raw: rec.raw });
+    ads.push({ zone: zoneVal, block: bm ? +bm[1] : null, floor, price, priceText, phone: phm ? phm[1] : null, direction, raw: rec.raw, _blockIndex: rec.blockIndex });
   }
+
+  // چند فایل پشتِ‌سرِهم توی یه پیام، و فقط آخرِ همه‌شون یه‌بار شماره‌تلفن (برای همه‌ی فایل‌ها).
+  // فایلی که شماره نداره، اگه توی همون گروه دقیقاً یه شماره‌ی منحصربه‌فرد باشه همون رو می‌گیره؛
+  // اگه چند شماره‌ی متفاوت بود دست نمی‌زنیم. گروه = «بلوک» (پاراگرافِ بین دو خط خالی)، مگر این‌که
+  // opts.sharedPhone باشه (ربات: یه پیام = یه نفر، پس کلِ پیام یه گروهه).
+  const groups = new Map();
+  for (const ad of ads) {
+    const k = opts.sharedPhone ? 0 : ad._blockIndex;
+    if (!groups.has(k)) groups.set(k, []);
+    groups.get(k).push(ad);
+  }
+  for (const group of groups.values()) {
+    const distinct = [...new Set(group.map(a => a.phone).filter(Boolean))];
+    if (distinct.length === 1) for (const ad of group) if (!ad.phone) ad.phone = distinct[0];
+  }
+  for (const ad of ads) delete ad._blockIndex;
   return ads;
 }
 

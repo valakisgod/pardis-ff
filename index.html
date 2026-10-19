@@ -2543,6 +2543,17 @@ function parsePrice(text){
   return { price: null, priceText: null };
 }
 
+// قیمتِ «تک‌عددی»: بعضی‌ها قیمت رو فقط به‌صورت یه عددِ تنها (۱ یا ۲ رقمی، به میلیارد) توی یه خط
+// می‌نویسن (مثل «8» یا «7») — یعنی ۸ یا ۷ میلیارد = ۸۰۰۰ یا ۷۰۰۰ میلیون. فقط وقتی استفاده می‌شه که
+// هیچ قیمتِ دیگه‌ای (x/xxx یا ۴-۵ رقمی) توی آگهی پیدا نشده باشه، و آخرین خطِ تک‌عددی انتخاب می‌شه.
+function parseLonePrice(lines){
+  for (let i = lines.length - 1; i >= 0; i--){
+    const m = lines[i].trim().match(/^(\d{1,2})$/);
+    if (m && +m[1] > 0) return { price: +m[1]*1000, priceText: m[1] };
+  }
+  return { price: null, priceText: null };
+}
+
 function extractAds(rawText){
   const records = splitIntoRecords(rawText);
   const ads = [];
@@ -2578,7 +2589,8 @@ function extractAds(rawText){
     const fm = joined.match(floorRe); const phm = joined.match(phoneRe);
     // همکف عدد ندارد؛ اگر عدد طبقه پیدا نشد ولی کلمه‌ی «همکف» بود، طبقه = ۰
     const floor = fm ? +fm[1] : (groundFloorRe.test(joined) ? 0 : null);
-    const { price, priceText } = parsePrice(joined);
+    let { price, priceText } = parsePrice(joined);
+    if (price == null) ({ price, priceText } = parseLonePrice(rec.lines));
     let direction = null;
     for (const [re,label] of dirMap){ if (re.test(joined)){ direction = label; break; } }
     const zoneVal = isKuhsar ? 'kuhsar' : (isGhadirOnly ? 'ghadir' : +zm[1]);

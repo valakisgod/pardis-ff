@@ -87,7 +87,7 @@ async function processMessage(msg, newAds) {
     return 0;
   }
 
-  const ads = extractAds(text);
+  const ads = extractAds(text, { sharedPhone: true });
   if (!ads.length) {
     console.log(`بدونِ آگهی: پیامی توی «${chat.title || chat.id}» (${text.length} نویسه) آگهیِ قابلِ‌تشخیص نداشت.`);
     return 0;

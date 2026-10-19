@@ -59,7 +59,7 @@ async function processMessage(msg) {
   const text = msg.text || msg.caption || '';
   if (!text) return;
 
-  const ads = extractAds(text);
+  const ads = extractAds(text, { sharedPhone: true });
   if (!ads.length) return;
 
   const batch = db.batch();
