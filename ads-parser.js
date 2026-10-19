@@ -157,6 +157,30 @@ function dedupKey(l) {
 }
 
 // ----------------------------------------------------------------------
+// کاهش قیمت: یه «واحد» رو با (زون، بلوک، طبقه، جهت) می‌شناسیم — قیمت توش نیست، پس همون واحد با
+// قیمتِ جدید «یه آگهیِ دیگه برای همون واحد» حساب می‌شه. اگه قیمتِ تازه از کمترین قیمتیِ که قبلاً
+// برای همون واحد دیده شده کمتر باشه، کاهش قیمته. (کمترین، نه آخرین: تا یه فایلِ قدیمیِ دوباره‌پست‌شده
+// با قیمتِ بالاتر، بعداً یه «کاهشِ کاذب» نسازه.) بلوک/طبقه‌ی نامشخص → تشخیص نمی‌دیم.
+// prevDocs: آگهی‌های قبلیِ هم‌بلوک (هر منبعی)؛ هر کدوم {zone, block, floor, direction, price, priceText}.
+// ----------------------------------------------------------------------
+function sameUnit(a, b) {
+  return a.block != null && a.floor != null
+    && String(a.zone) === String(b.zone) && a.block === b.block && a.floor === b.floor
+    && (a.direction || null) === (b.direction || null);
+}
+
+function findPriceDrop(ad, prevDocs) {
+  if (ad.price == null) return null;
+  let low = null;
+  for (const d of prevDocs) {
+    if (d.price == null || !sameUnit(ad, d)) continue;
+    if (low === null || d.price < low.price) low = d;
+  }
+  if (!low || ad.price >= low.price) return null;
+  return { from: low.price, to: ad.price, fromText: low.priceText || String(low.price), toText: ad.priceText || String(ad.price) };
+}
+
+// ----------------------------------------------------------------------
 // خریدارها: پیام‌هایی که کلمه‌ی خریدار/خواهان/... دارن، آگهیِ فروش نیستن؛ جدا ذخیره می‌شن
 // (مجموعه‌ی buyers، همون که برنامه‌ی وب می‌خونه) و برای تطبیقِ خودکار با آگهی‌های تازه
 // معیارهایی ازشون درمیاد: زون(ها) و سقفِ قیمت. فقط همین دو تا «شرطِ سخت» هستن؛ چیزی که
@@ -205,4 +229,4 @@ function adMatchesBuyer(ad, criteria) {
   return true;
 }
 
-module.exports = { extractAds, splitIntoRecords, parsePrice, dedupKey, extractBuyerRequests, buyerCriteria, adMatchesBuyer };
+module.exports = { extractAds, splitIntoRecords, parsePrice, dedupKey, extractBuyerRequests, buyerCriteria, adMatchesBuyer, sameUnit, findPriceDrop };

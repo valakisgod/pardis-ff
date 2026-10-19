@@ -111,5 +111,20 @@ assert(adMatchesBuyer({ zone: 3, price: 6000 }, c1) && !adMatchesBuyer({ zone: 4
 assert(adMatchesBuyer({ zone: 2, price: null }, c1), 'آگهیِ بدونِ قیمت فقط با زون مچ بشه');
 assert(buyerCriteria('خریدار فاز ۲ و ۳').zones.length === 0, '«فاز ۲» زون نیست');
 
+// ---- کاهش قیمت ----
+const { findPriceDrop } = require('./ads-parser');
+const unit = (o) => Object.assign({ zone: 3, block: 52, floor: 1, direction: 'شمالی', price: 6500, priceText: '6/500' }, o);
+let d = findPriceDrop(unit({ price: 6250, priceText: '6/250' }), [unit()]);
+assert(d && d.from === 6500 && d.to === 6250 && d.fromText === '6/500' && d.toText === '6/250', 'کاهش قیمتِ همون واحد: ' + JSON.stringify(d));
+assert(findPriceDrop(unit({ price: 6500 }), [unit()]) === null, 'قیمتِ برابر کاهش نیست');
+assert(findPriceDrop(unit({ price: 7000 }), [unit()]) === null, 'افزایش قیمت کاهش نیست');
+assert(findPriceDrop(unit({ price: 6250 }), [unit({ direction: 'جنوبی' })]) === null, 'جهتِ متفاوت = واحدِ دیگه');
+assert(findPriceDrop(unit({ price: 6250 }), [unit({ floor: 2 })]) === null, 'طبقه‌ی متفاوت = واحدِ دیگه');
+assert(findPriceDrop(unit({ price: 6250 }), [unit({ zone: 4 })]) === null, 'زونِ متفاوت = واحدِ دیگه');
+assert(findPriceDrop(unit({ price: 6250, floor: null }), [unit({ floor: null })]) === null, 'طبقه‌ی نامشخص → تشخیص نمی‌دیم');
+assert(findPriceDrop(unit({ price: 6800 }), [unit({ price: 6500 }), unit({ price: 7000 })]) === null, 'از کمترینِ قبلی مقایسه می‌شه، نه از بالاترین');
+assert(findPriceDrop(unit({ price: 6000 }), [unit({ price: 7000 }), unit({ price: 6500, priceText: '6/500' })]).from === 6500, 'مبنا کمترین قیمتِ قبلیه');
+assert(findPriceDrop(unit({ price: null }), [unit()]) === null, 'آگهیِ بدونِ قیمت');
+
 console.log(failures ? `\n${failures} خطا` : '\nهمه چی درسته ✅');
 process.exit(failures ? 1 : 0);

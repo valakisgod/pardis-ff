@@ -9,8 +9,8 @@
 
 const admin = require('firebase-admin');
 const crypto = require('crypto');
-const { extractAds, extractBuyerRequests, dedupKey } = require('./ads-parser');
-const { notifyNewAds, notifyMatches, notifyDueAlarms } = require('./push');
+const { extractAds, extractBuyerRequests, findPriceDrop, dedupKey } = require('./ads-parser');
+const { notifyNewAds, notifyMatches, notifyPriceDrops, notifyDueAlarms } = require('./push');
 
 const BOT_TOKEN = process.env.BALE_BOT_TOKEN;
 const API_BASE = `https://tapi.bale.ai/bot${BOT_TOKEN}`;
@@ -76,6 +76,17 @@ async function isNewAd(docId, key) {
   return !dup.docs.some(d => d.id !== docId);
 }
 
+// آگهی‌های قبلیِ هم‌بلوک (از آگهی‌های خودکارِ بله و فایل‌هایی که ادمین توی برنامه ثبت کرده) برای
+// تشخیصِ کاهش قیمت. فقط یه فیلتر (block) می‌زنیم و بقیه‌ی شرط‌ها (زون/طبقه/جهت) توی کد چک می‌شه.
+async function previousInBlock(block, selfId) {
+  const out = [];
+  for (const col of ['bale_listings', 'listings']) {
+    const snap = await db.collection(col).where('block', '==', block).get();
+    for (const d of snap.docs) if (d.id !== selfId) out.push(d.data());
+  }
+  return out;
+}
+
 async function processMessage(msg, newAds) {
   const chat = msg.chat || {};
   if (chat.type !== 'group' && chat.type !== 'supergroup') {
@@ -116,10 +127,19 @@ async function processMessage(msg, newAds) {
     const ad = ads[i];
     const docId = `${chat.id}_${msg.message_id}_${i}`;
     const key = dedupKey(ad);
-    if (await isNewAd(docId, key)) newAds.push(ad);
+    let drop = null;
+    if (await isNewAd(docId, key)) {
+      if (ad.block != null && ad.floor != null && ad.price != null) {
+        try { drop = findPriceDrop(ad, await previousInBlock(ad.block, docId)); }
+        catch (e) { console.error('بررسیِ کاهش قیمت ناموفق بود:', e.message); }
+      }
+      if (drop) ad.priceDrop = drop;
+      newAds.push(ad);
+    }
     batch.set(listingsCol.doc(docId), {
       zone: ad.zone, block: ad.block, floor: ad.floor, price: ad.price, priceText: ad.priceText,
       phone: ad.phone, direction: ad.direction, raw: ad.raw, dedupKey: key,
+      ...(drop ? { priceDrop: drop } : {}),
       sourceChatId: String(chat.id), sourceChatTitle: chat.title || null, sourceMessageId: msg.message_id,
       createdAt: admin.firestore.FieldValue.serverTimestamp(),
     }, { merge: true });
@@ -151,9 +171,13 @@ async function processMessage(msg, newAds) {
     // اعلان‌های گوشی: خطا توی این بخش نباید ذخیره‌ی آگهی‌ها رو خراب کنه.
     const messaging = admin.messaging();
     try {
-      const r = await notifyNewAds(messaging, db, newAds);
+      const r = await notifyNewAds(messaging, db, newAds.filter(a => !a.priceDrop));
       if (newAds.length) console.log('اعلانِ آگهیِ جدید:', JSON.stringify(r));
     } catch (e) { console.error('ارسالِ اعلانِ آگهی ناموفق بود:', e.message); }
+    try {
+      const r = await notifyPriceDrops(messaging, db, newAds.filter(a => a.priceDrop));
+      if (!r.skipped) console.log('اعلانِ کاهش قیمت:', JSON.stringify(r));
+    } catch (e) { console.error('ارسالِ اعلانِ کاهش قیمت ناموفق بود:', e.message); }
     try {
       const r = await notifyMatches(messaging, db, newAds, Date.now());
       if (!r.skipped) console.log('اعلانِ مچِ خریدار:', JSON.stringify(r));

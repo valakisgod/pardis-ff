@@ -110,6 +110,23 @@ const AD2 = 'زون 4\nبلوک 7\nطبقه 7 ش ش\nقیمت 7800\n09194101244'
     const r3 = await run({ store, updates: [msg(4, 13, 'زون 3\nبلوک 20\nقیمت 9000\n09121234568'), msg(5, 14, 'زون 4\nبلوک 21\nقیمت 5000\n09121234569')] });
     assert(!r3.sent.some(m => m.data.type === 'match'), 'گرون‌تر از سقف / زونِ دیگه مچ نشود');
   }
+  // ۸) کاهش قیمتِ همون واحد → سند priceDrop می‌گیره و فقط اعلانِ «کاهش قیمت» (نه «آگهی جدید») می‌ره
+  {
+    const U = (price, extra = '') => `زون 3\nبلوک 12\nطبقه 2 جنوبی\nقیمت ${price}\n0912123${extra || '4567'}`;
+    const store = { 'push_tokens/A': { ads: true } };
+    await run({ store, updates: [msg(1, 10, U(6500))] });
+    const r = await run({ store, updates: [msg(2, 11, U(6250, '4568'), -222)] });
+    const dropDoc = Object.keys(store).map(k => store[k]).find(v => v.priceDrop);
+    assert(dropDoc && dropDoc.priceDrop.from === 6500 && dropDoc.priceDrop.to === 6250, 'priceDrop روی سند ذخیره شود: ' + JSON.stringify(dropDoc && dropDoc.priceDrop));
+    assert(r.sent.length === 1 && r.sent[0].data.type === 'drop' && r.sent[0].data.body.includes('از 6500 به 6250'), 'فقط اعلانِ کاهش قیمت: ' + JSON.stringify(r.sent.map(m => m.data)));
+    // دوباره‌پستِ قیمتِ قدیمی (بالاتر) → کاهش نیست، اعلانِ «آگهی جدید» هم نه چون هم‌کلید با آگهیِ اولیه‌ست
+    const r2 = await run({ store, updates: [msg(3, 12, U(6500, '4569'), -333)] });
+    assert(!r2.sent.some(m => m.data.type === 'drop'), 'قیمتِ بالاتر کاهش نیست');
+    // فایلی که ادمین توی برنامه ثبت کرده (مجموعه‌ی listings) هم مبنای مقایسه‌ست
+    const store2 = { 'push_tokens/A': { ads: true }, 'listings/x': { zone: 3, block: 12, floor: 2, direction: 'جنوبی', price: 7000, priceText: '7000' } };
+    const r3 = await run({ store: store2, updates: [msg(1, 10, U(6400))] });
+    assert(r3.sent.some(m => m.data.type === 'drop' && m.data.body.includes('از 7000 به 6400')), 'مقایسه با فایل‌های دستی هم انجام شود');
+  }
   console.log(`${n} بررسی، ${failures} خطا`);
   process.exit(failures ? 1 : 0);
 })();

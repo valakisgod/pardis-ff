@@ -317,6 +317,7 @@
   .status-badge.status-negotiating{background:var(--brass-600);}
   .status-badge.status-sold{background:#6b6b6b;}
   /* نشانِ «این فایل خودکار از گروهِ بله خونده شده» — تا ادمین بدونه هنوز دستی تأیید/بازبینی نشده. */
+  .drop-badge{display:inline-block; font-size:.62rem; font-weight:700; background:#2f8f5b; color:#fff; border-radius:6px; padding:1px 7px; margin-right:6px; vertical-align:middle;}
   .bale-badge{display:inline-block; font-size:.62rem; font-weight:700; background:#3f6fb0; color:#fff; border-radius:6px; padding:1px 7px; margin-right:6px; vertical-align:middle;}
   .mini-select{font-family:inherit; font-size:.76rem; padding:3px 6px; border-radius:7px; border:1px solid var(--line); background:var(--surface); color:var(--text);}
   .btn-whatsapp{display:flex; align-items:center; justify-content:center; gap:6px; width:100%; margin-top:10px; padding:10px; border:none; border-radius:10px;
@@ -2911,12 +2912,13 @@ function listingCardHtml(l){
   const mediaBadge = (l.photoUrl || l.videoUrl)
     ? `<span class="media-badge">${l.photoUrl ? '📷' : ''}${l.videoUrl ? '🎥' : ''}</span>` : '';
   const baleBadge = l.source === 'bale' ? `<span class="bale-badge">🤖 بله</span>` : '';
+  const dropBadge = l.priceDrop ? `<span class="drop-badge">📉 کاهش قیمت</span>` : '';
   const price = priceShown(l);
   const saved = savedListingIds.has(l.id);
   return `<div class="u-card" onclick="showDetail('${esc(l.id)}')">
       <button class="save-btn${saved?' saved':''}" onclick="event.stopPropagation(); toggleSaveListing('${esc(l.id)}')">🔖</button>
       <div class="u-card-body">
-      <h3>${zoneLabel(l.zone)} · بلوک ${l.block ?? 'نامشخص'} ${dupBadge}${mediaBadge}${baleBadge}${statusBadgeHtml(l)}</h3>
+      <h3>${zoneLabel(l.zone)} · بلوک ${l.block ?? 'نامشخص'} ${dupBadge}${mediaBadge}${baleBadge}${dropBadge}${statusBadgeHtml(l)}</h3>
       <div class="meta">${floorLabel(l.floor)?('طبقه '+floorLabel(l.floor)+' · '):''}${esc(l.direction||'')}</div>
       ${price ? `<div class="price">💰 ${esc(price)}</div>` : ''}
       ${l.phone ? `<div class="phone">📞 ${esc(l.phone)}</div>` : ''}
@@ -2939,6 +2941,7 @@ function showDetail(id){
       ${floorLabel(g.floor) ? `<div>طبقه: ${floorLabel(g.floor)}</div>` : ''}
       ${g.direction ? `<div>جهت: ${esc(g.direction)}</div>` : ''}
       ${price ? `<div class="price">💰 ${esc(price)}</div>` : ''}
+      ${doc.priceDrop ? `<div class="price" style="color:#2f8f5b;">📉 کاهش قیمت: از ${esc(doc.priceDrop.fromText)} به ${esc(doc.priceDrop.toText)}</div>` : ''}
       ${g.phone ? `<div class="phone"><a href="tel:${esc(g.phone)}">📞 ${esc(g.phone)}</a></div>` : ''}
     </div>
     ${uploadsHtml}
@@ -3633,7 +3636,7 @@ async function fetchBaleListings(){
         zone: f.zone, block: f.block, floor: f.floor, price: f.price, priceText: f.priceText,
         phone: f.phone, direction: f.direction, raw: f.raw, archived: false,
         createdAt: f.createdAt || new Date().toISOString(),
-        source: 'bale', sourceChatTitle: f.sourceChatTitle || null,
+        source: 'bale', sourceChatTitle: f.sourceChatTitle || null, priceDrop: f.priceDrop || null,
       };
     });
     mergeListingSources();

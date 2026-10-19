@@ -36,6 +36,15 @@ const ad = (o) => Object.assign({ zone: 3, block: 12, floor: 2, price: 5200, dir
     assert.ok(many.body.includes('2 خریدار'));
     assert.strictEqual(push.buildMatchPayload([]), null);
   });
+  await t('اعلانِ کاهش قیمت: متنِ اصلیِ قیمت‌ها، تک و چندتایی', () => {
+    const one = push.buildDropPayload([ad({ priceDrop: { fromText: '6/500', toText: '6/250' } })]);
+    assert.strictEqual(one.title, '📉 کاهش قیمت');
+    assert.ok(one.body.includes('از 6/500 به 6/250') && one.body.includes('بلوک 12'));
+    const many = push.buildDropPayload([1, 2, 3, 4].map(i => ad({ block: i, priceDrop: { fromText: '8', toText: '7' } })));
+    assert.strictEqual(many.title, '📉 4 کاهش قیمت');
+    assert.ok(many.body.endsWith('و 1 موردِ دیگه'));
+    assert.strictEqual(push.buildDropPayload([]), null);
+  });
   await t('پیامِ FCM فقط data داره و همه‌ی مقدارها رشته‌اند', () => {
     const m = push.toFcmMessage(push.buildNewAdsPayload([ad()]), ['t1']);
     assert.ok(!m.notification);

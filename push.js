@@ -77,6 +77,37 @@ function buildAlarmPayload(alarm) {
   };
 }
 
+// کاهش قیمتِ یه واحد (ad.priceDrop = {fromText, toText}) → یک اعلانِ جمع‌وجور
+function describeUnit(ad) {
+  const parts = [zoneLabel(ad.zone)];
+  if (ad.block != null) parts.push('بلوک ' + ad.block);
+  if (ad.floor != null) parts.push(ad.floor === 0 ? 'همکف' : 'طبقه ' + ad.floor);
+  if (ad.direction) parts.push(ad.direction);
+  return parts.join(' · ');
+}
+
+function buildDropPayload(drops) {
+  if (!drops.length) return null;
+  const line = a => `${describeUnit(a)} · از ${a.priceDrop.fromText} به ${a.priceDrop.toText}`;
+  const shown = drops.slice(0, 3).map(line);
+  const rest = drops.length - shown.length;
+  return {
+    type: 'drop',
+    title: drops.length === 1 ? '📉 کاهش قیمت' : `📉 ${drops.length} کاهش قیمت`,
+    body: shown.join('\n') + (rest > 0 ? `\nو ${rest} موردِ دیگه` : ''),
+    tag: 'pardis-drops',
+    url: APP_URL,
+  };
+}
+
+async function notifyPriceDrops(messaging, db, drops) {
+  const payload = buildDropPayload(drops);
+  if (!payload) return { ok: 0, dead: 0, skipped: 'no-drops' };
+  const docs = await getTokenDocs(db, 'ads');
+  if (!docs.length) return { ok: 0, dead: 0, skipped: 'no-tokens' };
+  return sendToTokens(messaging, db, docs, payload);
+}
+
 // مچ‌های «آگهیِ تازه ↔ خریدار»: matches = [{ ad, buyers: [{phone,...}] }] → یک اعلانِ جمع‌وجور.
 function buildMatchPayload(matches) {
   if (!matches.length) return null;
@@ -182,6 +213,6 @@ async function notifyDueAlarms(messaging, db, nowMs) {
 }
 
 module.exports = {
-  APP_URL, describeAd, buildNewAdsPayload, buildMatchPayload, notifyMatches, dueAlarms, buildAlarmPayload, toFcmMessage,
+  APP_URL, describeAd, buildNewAdsPayload, buildMatchPayload, notifyMatches, buildDropPayload, notifyPriceDrops, dueAlarms, buildAlarmPayload, toFcmMessage,
   sendToTokens, notifyNewAds, notifyDueAlarms,
 };
