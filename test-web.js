@@ -16,7 +16,8 @@ function grab(name) {
 function load(names, ctx) {
   const tagDefs = html.slice(html.indexOf('const NO_LOAN_RE'), html.indexOf('];', html.indexOf('const TAG_DEFS')) + 2);
   const tagIds = html.match(/const TAG_FILTER_IDS = [^;]+;/)[0];
-  const life = ['STALE_DAYS', 'DAY_MS', 'TEHRAN_OFFSET_MS'].map(c => html.match(new RegExp('const ' + c + ' = [^;]+;'))[0]).join('\n') + '\nlet freshOnly = false;\n';
+  const baleConsts = ['BALE_KEEP_DAYS', 'BALE_QUERY_LIMIT'].map(c => html.match(new RegExp('const ' + c + ' = [^;]+;'))[0]).join('\n') + '\n';
+  const life = baleConsts + ['STALE_DAYS', 'DAY_MS', 'TEHRAN_OFFSET_MS'].map(c => html.match(new RegExp('const ' + c + ' = [^;]+;'))[0]).join('\n') + '\nlet freshOnly = false;\n';
   const consts = life + tagDefs + '\n' + tagIds + '\nlet activeTags = new Set();\n' + ['CMP_MIN_UNITS', 'CMP_SHOW_PCT'].map(c => html.match(new RegExp('const ' + c + ' = [^;]+;'))[0]).join('\n');
   const code = consts + '\nlet _blockStatsFor = null, _blockStats = null;\n' + names.map(grab).join('\n') + '\nthis.activeTags = activeTags; this.setFresh = v => { freshOnly = v; };';
   vm.createContext(ctx); vm.runInContext(code, ctx); return ctx;
@@ -25,7 +26,7 @@ function load(names, ctx) {
 let failures = 0, n = 0;
 const assert = (c, m) => { n++; if (!c) { failures++; console.error('FAIL:', m); } };
 
-const ctx = load(['lastSeenOf', 'daysSince', 'isStale', 'matchesFresh', 'staleBadgeHtml', 'timeLineHtml', 'relTime', 'tehranMidnightTimestamp', 'followUpTime', 'floorLabel', 'zoneLabel', 'followUpLabel', 'normalizeNumbers', 'normalizeChars', 'extractTags', 'displayTags', 'listingTags', 'matchesTags', 'tagsHtml', 'dedupKey', 'unitId', 'getBlockStats', 'medianOf', 'fmtMillions', 'priceVsBlock', 'cmpBadgeHtml', 'cmpDetailHtml'],
+const ctx = load(['fsValueToJs', 'fsFieldsToObj', 'baleQueryBody', 'parseRunQuery', 'mapBaleDoc', 'mergeBale', 'lastSeenOf', 'daysSince', 'isStale', 'matchesFresh', 'staleBadgeHtml', 'timeLineHtml', 'relTime', 'tehranMidnightTimestamp', 'followUpTime', 'floorLabel', 'zoneLabel', 'followUpLabel', 'normalizeNumbers', 'normalizeChars', 'extractTags', 'displayTags', 'listingTags', 'matchesTags', 'tagsHtml', 'dedupKey', 'unitId', 'getBlockStats', 'medianOf', 'fmtMillions', 'priceVsBlock', 'cmpBadgeHtml', 'cmpDetailHtml'],
   { allListings: [], esc: x => String(x), Intl, Date, Math });
 const L = (o) => Object.assign({ id: Math.random(), zone: 3, block: 12, floor: 1, direction: 'شمالی', price: 6000, phone: '0912', createdAt: '2026-10-01T00:00:00Z' }, o);
 const setAll = (arr) => { ctx.allListings = arr; };   // آرایه‌ی تازه = کش باطل می‌شه، مثل mergeListingSources
@@ -106,6 +107,30 @@ const t1 = new Date(ctx.followUpTime(1, NOW));
 assert(t1.getUTCHours() === 6 && t1.getUTCMinutes() === 30, 'ساعتِ ۱۰ تهران: ' + t1.toISOString());
 assert(ctx.followUpTime(1, NOW) > NOW && ctx.followUpTime(7, NOW) - ctx.followUpTime(1, NOW) === 6 * 86400000, 'فاصله‌ی روزها');
 assert(ctx.followUpLabel({ zone: 3, block: 52, floor: 1, phone: '0912' }) === 'پیگیری: زون 3 · بلوک 52 · طبقه 1 — هنوز هست؟ 0912', 'برچسبِ یادآوری: ' + ctx.followUpLabel({ zone: 3, block: 52, floor: 1, phone: '0912' }));
+
+// ---- خواندنِ کم‌حجمِ آگهی‌های ربات ----
+const body = ctx.baleQueryBody('2026-10-01T00:00:00.000Z', 500).structuredQuery;
+assert(body.from[0].collectionId === 'bale_listings' && body.limit === 500 && body.where.fieldFilter.op === 'GREATER_THAN_OR_EQUAL'
+  && body.where.fieldFilter.value.timestampValue === '2026-10-01T00:00:00.000Z' && body.orderBy[0].direction === 'ASCENDING', 'بدنه‌ی کوئری');
+const fsDoc = (id, extra) => ({ name: 'projects/p/databases/(default)/documents/bale_listings/' + id, fields: Object.assign({
+  zone: { integerValue: '3' }, block: { integerValue: '12' }, floor: { integerValue: '2' }, price: { integerValue: '6250' },
+  priceText: { stringValue: '6/250' }, createdAt: { timestampValue: '2026-10-19T10:00:00Z' },
+  tags: { arrayValue: { values: [{ stringValue: 'loan' }] } },
+  priceDrop: { mapValue: { fields: { fromText: { stringValue: '6/500' }, toText: { stringValue: '6/250' } } } },
+}, extra || {}) });
+const parsed = ctx.parseRunQuery([{ readTime: 'x' }]);
+assert(parsed.length === 0 && ctx.parseRunQuery(null).length === 0, 'پاسخِ خالی (فقط readTime) یعنی هیچ سندی');
+const mapped = ctx.mapBaleDoc(ctx.parseRunQuery([{ document: fsDoc('abc') }, { readTime: 'y' }])[0]);
+assert(mapped.id === 'bale_abc' && mapped.block === 12 && mapped.priceText === '6/250' && mapped.tags.join() === 'loan' && mapped.priceDrop.toText === '6/250' && mapped.source === 'bale', 'نگاشتِ سند: ' + JSON.stringify(mapped));
+// ادغام: بدونِ تکرار، قدیمی‌ها (بیش از ۳۰ روز) حذف، و تازه‌ترین createdAt برگردد
+const M = new Map(); const nowMs = Date.parse('2026-10-20T12:00:00Z');
+const B = (id, iso) => ({ id, createdAt: iso });
+let newest = ctx.mergeBale(M, [B('a', '2026-10-19T10:00:00Z'), B('b', '2026-10-18T10:00:00Z'), B('old', '2026-08-01T00:00:00Z')], nowMs);
+assert(M.size === 2 && !M.has('old') && newest === '2026-10-19T10:00:00Z', 'قدیمی‌ها حذف و newest درست');
+newest = ctx.mergeBale(M, [B('a', '2026-10-19T10:00:00Z'), B('c', '2026-10-20T08:00:00Z')], nowMs);
+assert(M.size === 3 && newest === '2026-10-20T08:00:00Z', 'هم‌پوشانیِ درخواست‌ها تکرار نمی‌سازه');
+newest = ctx.mergeBale(M, [], Date.parse('2026-12-31T00:00:00Z'));
+assert(M.size === 0 && newest === null, 'با گذشتِ زمان کشِ قدیمی خالی می‌شه');
 
 // قالبِ قیمت
 assert(ctx.fmtMillions(6250) === '6/250' && ctx.fmtMillions(8000) === '8/000' && ctx.fmtMillions(950) === '950', 'قالبِ قیمت');

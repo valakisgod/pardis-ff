@@ -7,6 +7,7 @@ const REPO = __dirname;
 let failures = 0, n = 0;
 const assert = (c, m) => { n++; if (!c) { failures++; console.error('FAIL:', m); } };
 
+const reads = { n: 0, q: 0 };
 function run({ store, updates, tokensFail }) {
   return new Promise((resolve) => {
     const sent = []; const log = []; const errs = [];
@@ -19,7 +20,12 @@ function run({ store, updates, tokensFail }) {
     const colApi = (name) => ({
       doc: (id) => ({ get: async () => snap(name + '/' + id), set: async (d, o) => { store[name + '/' + id] = o && o.merge ? Object.assign({}, store[name + '/' + id], d) : d; }, delete: async () => { delete store[name + '/' + id]; } }),
       get: async () => ({ docs: Object.keys(store).filter(k => k.startsWith(name + '/')).map(snap) }),
-      where: (f, op, v) => ({ limit: () => ({ get: async () => ({ docs: Object.keys(store).filter(k => k.startsWith(name + '/') && store[k][f] === v).map(snap) }) }), get: async () => ({ docs: Object.keys(store).filter(k => k.startsWith(name + '/') && store[k][f] === v).map(snap) }) }),
+      where: (f, op, v) => {
+        if (op === '==' && f === 'block') reads.q++;
+        const rows = () => Object.keys(store).filter(k => k.startsWith(name + '/') && store[k][f] !== undefined && (op === '==' ? store[k][f] === v : op === '<' ? store[k][f] < v : op === '>=' ? store[k][f] >= v : false));
+        const q = { limit: (n) => ({ get: async () => { const r = rows().slice(0, n); reads.n += r.length; return { docs: r.map(snap) }; } }), get: async () => { const r = rows(); reads.n += r.length; return { docs: r.map(snap) }; } };
+        return q;
+      },
     });
     const db = { collection: colApi, batch: () => { const ops = []; return { set: (ref, d, o) => ops.push([ref, d, o]), commit: async () => { for (const [ref, d, o] of ops) await ref.set(d, o); } }; } };
     const origLoad = Module._load;
@@ -126,6 +132,35 @@ const AD2 = 'زون 4\nبلوک 7\nطبقه 7 ش ش\nقیمت 7800\n09194101244'
     const store2 = { 'push_tokens/A': { ads: true }, 'listings/x': { zone: 3, block: 12, floor: 2, direction: 'جنوبی', price: 7000, priceText: '7000' } };
     const r3 = await run({ store: store2, updates: [msg(1, 10, U(6400))] });
     assert(r3.sent.some(m => m.data.type === 'drop' && m.data.body.includes('از 7000 به 6400')), 'مقایسه با فایل‌های دستی هم انجام شود');
+  }
+  // ۹) خواندنِ کم: چند آگهی از یه بلوک توی یه اجرا → هر بلوک فقط یک‌بار (برای هر دو مجموعه) خونده بشه؛
+  //    و آگهیِ بعدیِ همون واحد توی همون اجرا هنوز با قبلی مقایسه بشه
+  {
+    const U = (price, phone) => `زون 3\nبلوک 12\nطبقه 2 جنوبی\nقیمت ${price}\n${phone}`;
+    const store = { 'push_tokens/A': { ads: true } };
+    reads.q = 0;
+    const r = await run({ store, updates: [msg(1, 10, U(6500, '09121230001')), msg(2, 11, U(6250, '09121230002')), msg(3, 12, 'زون 3\nبلوک 12\nطبقه 5\nقیمت 7000\n09121230003')] });
+    assert(reads.q === 2, 'بلوکِ ۱۲ فقط یک‌بار برای هر مجموعه خونده بشه (2 کوئری)، نه برای هر آگهی: ' + reads.q);
+    assert(r.sent.some(m => m.data.type === 'drop' && m.data.body.includes('از 6500 به 6250')), 'کاهش قیمتِ هم‌اجرایی هنوز تشخیص داده بشه: ' + JSON.stringify(r.sent.map(m => m.data)));
+  }
+  // ۱۰) پاک‌سازیِ خریدارهای قدیمیِ ربات: فقط source=bale و بالای ۴۵ روز؛ دستیِ ادمین و تازه‌ها دست‌نخورده
+  {
+    const day = 86400000; const iso = (d) => new Date(Date.now() - d * day).toISOString();
+    const store = {
+      'buyers/oldbot': { text: 'x', source: 'bale', createdAt: iso(100) },
+      'buyers/oldadmin': { text: 'y', createdAt: iso(100) },
+      'buyers/freshbot': { text: 'z', source: 'bale', createdAt: iso(5) },
+    };
+    await run({ store, updates: [] });
+    assert(store['buyers/oldbot'] === undefined, 'خریدارِ قدیمیِ ربات پاک بشه');
+    assert(store['buyers/oldadmin'] !== undefined && store['buyers/freshbot'] !== undefined, 'خریدارِ دستیِ ادمین و خریدارِ تازه بمونن');
+  }
+  // ۱۱) خریدارِ بالای ۳۰ روز دیگه مچ نمی‌شه (و خونده هم نمی‌شه)
+  {
+    const iso = (d) => new Date(Date.now() - d * 86400000).toISOString();
+    const store = { 'push_tokens/A': { ads: true }, 'buyers/old': { text: 'خریدار زون 3', phone: '0999', criteria: { zones: ['3'], maxPrice: 9000 }, createdAt: iso(40) } };
+    const r = await run({ store, updates: [msg(1, 10, 'زون 3\nبلوک 12\nقیمت 5200\n09121234567')] });
+    assert(!r.sent.some(m => m.data.type === 'match'), 'خریدارِ ۴۰ روزه مچ نشه');
   }
   console.log(`${n} بررسی، ${failures} خطا`);
   process.exit(failures ? 1 : 0);

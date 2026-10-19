@@ -78,13 +78,37 @@ async function isNewAd(docId, key) {
 
 // آگهی‌های قبلیِ هم‌بلوک (از آگهی‌های خودکارِ بله و فایل‌هایی که ادمین توی برنامه ثبت کرده) برای
 // تشخیصِ کاهش قیمت. فقط یه فیلتر (block) می‌زنیم و بقیه‌ی شرط‌ها (زون/طبقه/جهت) توی کد چک می‌شه.
+// هر بلوک توی یه اجرا فقط یک‌بار از دیتابیس خونده می‌شه (قبلاً برای هر آگهی دوباره)، و آگهی‌هایی که
+// همین اجرا ذخیره می‌کنه به همون کش اضافه می‌شن تا آگهیِ بعدیِ همون واحد باهاشون مقایسه بشه.
+const blockCache = new Map();
 async function previousInBlock(block, selfId) {
-  const out = [];
-  for (const col of ['bale_listings', 'listings']) {
-    const snap = await db.collection(col).where('block', '==', block).get();
-    for (const d of snap.docs) if (d.id !== selfId) out.push(d.data());
+  if (!blockCache.has(block)) {
+    const list = [];
+    for (const col of ['bale_listings', 'listings']) {
+      const snap = await db.collection(col).where('block', '==', block).get();
+      for (const d of snap.docs) list.push({ id: d.id, ...d.data() });
+    }
+    blockCache.set(block, list);
   }
-  return out;
+  return blockCache.get(block).filter(x => x.id !== selfId);
+}
+function rememberInBlock(docId, ad) {
+  if (ad.block == null || !blockCache.has(ad.block)) return;
+  blockCache.get(ad.block).push({ id: docId, zone: ad.zone, block: ad.block, floor: ad.floor, direction: ad.direction, price: ad.price, priceText: ad.priceText });
+}
+
+// خریدارهایی که خودِ ربات ساخته (source: 'bale') و از ۴۵ روز گذشته‌اند، دیگه به کاری نمی‌آن (تطبیق فقط
+// خریدارهای ۳۰ روزِ اخیر رو می‌بینه) و فقط دیتابیس رو بزرگ می‌کنن، پس پاک می‌شن. خریدارهایی که ادمین
+// دستی ثبت کرده (بدونِ source) هیچ‌وقت دست نمی‌خورن.
+const BOT_BUYER_KEEP_MS = 45 * 24 * 60 * 60 * 1000;
+async function cleanupOldBotBuyers(nowMs) {
+  const cutoff = new Date(nowMs - BOT_BUYER_KEEP_MS).toISOString();
+  const snap = await buyersCol.where('createdAt', '<', cutoff).limit(200).get();
+  let n = 0;
+  for (const d of snap.docs) {
+    if (d.data().source === 'bale') { await buyersCol.doc(d.id).delete(); n++; }
+  }
+  return n;
 }
 
 async function processMessage(msg, newAds) {
@@ -144,6 +168,7 @@ async function processMessage(msg, newAds) {
       createdAt: admin.firestore.FieldValue.serverTimestamp(),
     }, { merge: true });
   }
+  for (let i = 0; i < ads.length; i++) rememberInBlock(`${chat.id}_${msg.message_id}_${i}`, ads[i]);
   await batch.commit();
   console.log(`${ads.length} آگهی از گروه «${chat.title || chat.id}» ذخیره شد.`);
   return ads.length;
@@ -182,6 +207,10 @@ async function processMessage(msg, newAds) {
       const r = await notifyMatches(messaging, db, newAds, Date.now());
       if (!r.skipped) console.log('اعلانِ مچِ خریدار:', JSON.stringify(r));
     } catch (e) { console.error('ارسالِ اعلانِ مچِ خریدار ناموفق بود:', e.message); }
+    try {
+      const n = await cleanupOldBotBuyers(Date.now());
+      if (n) console.log(`${n} خریدارِ قدیمیِ ربات پاک شد.`);
+    } catch (e) { console.error('پاک‌سازیِ خریدارهای قدیمی ناموفق بود:', e.message); }
     try {
       const r = await notifyDueAlarms(messaging, db, Date.now());
       if (r.due) console.log('اعلانِ آلارم:', JSON.stringify(r));

@@ -3836,7 +3836,75 @@ function fsFieldsToObj(fields){
   return obj;
 }
 
-async function fetchBaleListings(){
+// ---------------------------------------------------------------------
+// خواندنِ آگهی‌های ربات با کمترین «خواندنِ Firestore». سقفِ پلنِ رایگان روزی ۵۰ هزار خواندنه و هر
+// سند یک خواندن حساب می‌شه؛ قبلاً هر دقیقه همه‌ی آگهی‌ها (تا ۳۰۰۰ تا) دوباره خونده می‌شد. حالا:
+//  ۱) فقط آگهی‌های BALE_KEEP_DAYS روز اخیر (قدیمی‌تر که «احتمالاً قدیمی»ه اصلاً خونده نمی‌شه)،
+//  ۲) هر بار فقط آگهی‌های «جدیدتر از آخرین چیزی که داریم» (runQuery با createdAt)،
+//  ۳) نتیجه توی localStorage کش می‌شه تا باز کردنِ دوباره‌ی صفحه همه‌چی رو از اول نخونه،
+//  ۴) وقتی تب پنهانه هیچ درخواستی زده نمی‌شه.
+// ---------------------------------------------------------------------
+const BALE_KEEP_DAYS = 30;
+const BALE_QUERY_LIMIT = 500;
+const BALE_CACHE_KEY = 'pardis_bale_cache_v1';
+const baleDocs = new Map();     // id → آگهی (به‌شکلِ آماده‌ی برنامه)
+let baleLastCreated = null;     // تازه‌ترین createdAt که دیده‌ایم (ISO)
+
+function baleQueryBody(sinceIso, limit){
+  return { structuredQuery: {
+    from: [{ collectionId: 'bale_listings' }],
+    where: { fieldFilter: { field: { fieldPath: 'createdAt' }, op: 'GREATER_THAN_OR_EQUAL', value: { timestampValue: sinceIso } } },
+    orderBy: [{ field: { fieldPath: 'createdAt' }, direction: 'ASCENDING' }],
+    limit,
+  } };
+}
+
+// پاسخِ runQuery آرایه‌ای از {document?, readTime} است؛ ردیفِ بدونِ document (نتیجه‌ی خالی) نادیده گرفته می‌شه
+function parseRunQuery(arr){
+  return (Array.isArray(arr) ? arr : []).filter(r => r && r.document).map(r => r.document);
+}
+
+function mapBaleDoc(d){
+  const f = fsFieldsToObj(d.fields || {});
+  return {
+    id: 'bale_' + d.name.split('/').pop(),
+    zone: f.zone, block: f.block, floor: f.floor, price: f.price, priceText: f.priceText,
+    phone: f.phone, direction: f.direction, raw: f.raw, archived: false,
+    createdAt: f.createdAt || new Date().toISOString(),
+    source: 'bale', sourceChatTitle: f.sourceChatTitle || null, priceDrop: f.priceDrop || null,
+    tags: Array.isArray(f.tags) ? f.tags : null,
+  };
+}
+
+// آگهی‌های جدید رو توی map می‌ریزه (با id یکتا، پس هم‌پوشانیِ دو درخواست مشکلی نیست)، قدیمی‌ترها رو
+// پاک می‌کنه، و تازه‌ترین createdAt رو برمی‌گردونه.
+function mergeBale(map, listings, nowMs){
+  for (const l of listings) map.set(l.id, l);
+  const floorMs = nowMs - BALE_KEEP_DAYS * 24 * 60 * 60 * 1000;
+  let newest = null;
+  for (const [id, l] of map){
+    const t = new Date(l.createdAt).getTime();
+    if (!isNaN(t) && t < floorMs){ map.delete(id); continue; }
+    if (newest === null || l.createdAt > newest) newest = l.createdAt;
+  }
+  return newest;
+}
+
+function loadBaleCache(){
+  try {
+    const c = JSON.parse(localStorage.getItem(BALE_CACHE_KEY) || 'null');
+    if (!c || !Array.isArray(c.items)) return;
+    baleLastCreated = mergeBale(baleDocs, c.items, Date.now());
+  } catch (e) {}
+}
+function saveBaleCache(){
+  try { localStorage.setItem(BALE_CACHE_KEY, JSON.stringify({ items: [...baleDocs.values()] })); } catch (e) {}
+}
+
+// راهِ پشتیبان: اگه کوئریِ جدید (runQuery) خطا بده (مثلاً قوانین/ایندکس)، به روشِ قدیمی (خواندنِ کل
+// فهرست) برمی‌گردیم تا برنامه خالی نشه، ولی حداکثر هر ۵ دقیقه یک‌بار چون پرخواندنه.
+let baleQueryBroken = false, baleLegacyAt = 0;
+async function fetchBaleListingsLegacy(){
   try {
     let docs = []; let pageToken = '';
     for (let i = 0; i < 10; i++){ // حداکثر ۱۰ صفحه (۳۰۰۰ آگهی) — بیشتر از این لازم نمی‌شه
@@ -3859,6 +3927,35 @@ async function fetchBaleListings(){
         source: 'bale', sourceChatTitle: f.sourceChatTitle || null, priceDrop: f.priceDrop || null, tags: Array.isArray(f.tags) ? f.tags : null,
       };
     });
+    mergeListingSources();
+  } catch (e) {
+    console.error('خطا در خواندنِ آگهی‌های خودکارِ بله:', e);
+  }
+}
+
+async function fetchBaleListings(){
+  if (baleQueryBroken){
+    if (Date.now() - baleLegacyAt < 5 * 60 * 1000) return;
+    baleLegacyAt = Date.now();
+    return fetchBaleListingsLegacy();
+  }
+  try {
+    const nowMs = Date.now();
+    const floorIso = new Date(nowMs - BALE_KEEP_DAYS * 24 * 60 * 60 * 1000).toISOString();
+    let since = (baleLastCreated && baleLastCreated > floorIso) ? baleLastCreated : floorIso;
+    const url = `https://firestore.googleapis.com/v1/projects/${BALE_FIRESTORE_PROJECT}/databases/(default)/documents:runQuery`;
+    for (let i = 0; i < 20; i++){
+      const res = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(baleQueryBody(since, BALE_QUERY_LIMIT)) });
+      if (!res.ok){ baleQueryBroken = true; throw new Error('runQuery HTTP ' + res.status); }
+      const docs = parseRunQuery(await res.json()).map(mapBaleDoc);
+      baleLastCreated = mergeBale(baleDocs, docs, Date.now()) || baleLastCreated;
+      if (docs.length < BALE_QUERY_LIMIT) break;
+      const next = docs[docs.length - 1].createdAt;
+      if (!next || next <= since) break;     // همه‌ی صفحه هم‌زمان‌اند؛ بیشتر پیش نمی‌ریم
+      since = next;
+    }
+    baleListings = [...baleDocs.values()];
+    saveBaleCache();
     mergeListingSources();
   } catch (e) {
     console.error('خطا در خواندنِ آگهی‌های خودکارِ بله:', e);
@@ -3899,11 +3996,14 @@ async function init(){
   // آگهی‌هایی که سرویسِ خودکارِ بله توی Firestoreِ جدا ذخیره می‌کنه، جدا از دیتابیسِ خودِ این
   // صفحه خونده می‌شن (چون «db» اینجا شیمِ Firestoreِ پروژه‌ی خودِ برنامه است و این کالکشن باید بدونِ ورود هم خونده بشه) و بعد کنارِ
   // فایل‌های خودِ ادمین قاطی می‌شن تا توی اکسپلور/کوهسار/غدیر عادی دیده بشن.
+  loadBaleCache();
+  if (baleDocs.size){ baleListings = [...baleDocs.values()]; mergeListingSources(); }   // نمایشِ فوریِ کش، بعد فقط تازه‌ها
   fetchBaleListings();
-  setInterval(fetchBaleListings, 60000);
+  setInterval(() => { if (!document.hidden) fetchBaleListings(); }, 60000);
+  document.addEventListener('visibilitychange', () => { if (!document.hidden) fetchBaleListings(); });
   pushQuietRefresh();
 
-  db.collection('buyers').orderBy('createdAt','desc').onSnapshot(
+  db.collection('buyers').orderBy('createdAt','desc').limit(300).onSnapshot(
     snap => { allBuyers = snap.docs.map(d => ({ id:d.id, ...d.data() })); renderBuyers(); renderSaved(); },
     err => { document.getElementById('buyersList').innerHTML = '<div class="empty">خطا در اتصال به داده‌ها: '+err.code+'</div>'; }
   );

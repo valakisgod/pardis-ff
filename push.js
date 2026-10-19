@@ -176,11 +176,10 @@ const BUYER_MAX_AGE_MS = 30 * 24 * 60 * 60 * 1000;
 async function notifyMatches(messaging, db, newAds, nowMs) {
   if (!newAds.length) return { ok: 0, dead: 0, skipped: 'no-ads' };
   const { buyerCriteria, adMatchesBuyer } = require('./ads-parser');
-  const snap = await db.collection('buyers').get();
-  const buyers = snap.docs.map(d => d.data()).filter(b => {
-    const t = Date.parse(b.createdAt);
-    return isNaN(t) || nowMs - t <= BUYER_MAX_AGE_MS;
-  }).map(b => ({ phone: b.phone || null, criteria: b.criteria || buyerCriteria(b.text) }));
+  // فقط خریدارهای ۳۰ روزِ اخیر خونده می‌شن (نه کلِ مجموعه) تا هر اجرا خواندنِ کمی داشته باشه
+  const since = new Date(nowMs - BUYER_MAX_AGE_MS).toISOString();
+  const snap = await db.collection('buyers').where('createdAt', '>=', since).get();
+  const buyers = snap.docs.map(d => d.data()).map(b => ({ phone: b.phone || null, criteria: b.criteria || buyerCriteria(b.text) }));
   const matches = [];
   for (const ad of newAds) {
     const hit = buyers.filter(b => adMatchesBuyer(ad, b.criteria));
