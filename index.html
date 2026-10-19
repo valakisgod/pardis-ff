@@ -317,6 +317,8 @@
   .status-badge.status-negotiating{background:var(--brass-600);}
   .status-badge.status-sold{background:#6b6b6b;}
   /* نشانِ «این فایل خودکار از گروهِ بله خونده شده» — تا ادمین بدونه هنوز دستی تأیید/بازبینی نشده. */
+  .cmp-low{color:#2f8f5b; font-weight:700;}
+  .cmp-high{color:#b0503f; font-weight:700;}
   .drop-badge{display:inline-block; font-size:.62rem; font-weight:700; background:#2f8f5b; color:#fff; border-radius:6px; padding:1px 7px; margin-right:6px; vertical-align:middle;}
   .bale-badge{display:inline-block; font-size:.62rem; font-weight:700; background:#3f6fb0; color:#fff; border-radius:6px; padding:1px 7px; margin-right:6px; vertical-align:middle;}
   .mini-select{font-family:inherit; font-size:.76rem; padding:3px 6px; border-radius:7px; border:1px solid var(--line); background:var(--surface); color:var(--text);}
@@ -2847,6 +2849,76 @@ function esc(v){
 // قیمت دقیقاً به همان شکلی که در متن اصلی نوشته شده؛ برای فایل‌های قدیمی که متنِ قیمت ندارند همان عدد.
 function priceShown(l){ return l.priceText || (l.price ? String(l.price) : ''); }
 
+// ---------------------------------------------------------------------
+// مقایسه‌ی قیمت با «بلوک»: برای هر فایل، میانه‌ی قیمتِ بقیه‌ی واحدهای هم‌زون و هم‌بلوک (فعال، بدون
+// تکرار) حساب می‌شه. هر «واحد» یه‌بار شمرده می‌شه (زون+بلوک+طبقه+جهت؛ اگه طبقه نامشخص بود خودِ
+// آگهی) و قیمتِ تازه‌ترینِ همون واحد ملاکه. با کمتر از ۳ واحدِ دیگه، مقایسه نشون داده نمی‌شه.
+// تقریبیه: متراژ و طبقه توی متن‌ها ثابت نیست، پس واحدهای بلوک کاملاً هم‌ارز نیستن.
+// ---------------------------------------------------------------------
+const CMP_MIN_UNITS = 3;      // حداقلِ واحدِ دیگه برای مقایسه
+const CMP_SHOW_PCT = 5;       // اختلافِ کمتر از این درصد «نزدیکِ میانه» حساب می‌شه و برچسب نمی‌گیره
+let _blockStatsFor = null, _blockStats = null;
+
+function unitId(l){
+  return l.floor != null ? [l.zone, l.block, l.floor, l.direction || ''].join('|') : 'd:' + dedupKey(l);
+}
+
+function getBlockStats(){
+  if (_blockStatsFor === allListings && _blockStats) return _blockStats;
+  const latest = new Map();   // unitId → {price, t, zoneBlock}
+  for (const l of allListings){
+    if (l.archived || l.block == null || !(l.price > 0)) continue;
+    const id = unitId(l); const t = String(l.createdAt || '');
+    const cur = latest.get(id);
+    if (!cur || t > cur.t) latest.set(id, { id, price: l.price, t, zb: l.zone + '|' + l.block });
+  }
+  const byBlock = new Map();
+  for (const u of latest.values()){
+    if (!byBlock.has(u.zb)) byBlock.set(u.zb, []);
+    byBlock.get(u.zb).push(u);
+  }
+  _blockStatsFor = allListings; _blockStats = byBlock;
+  return byBlock;
+}
+
+function medianOf(nums){
+  const a = [...nums].sort((x, y) => x - y); const m = a.length >> 1;
+  return a.length % 2 ? a[m] : (a[m-1] + a[m]) / 2;
+}
+
+// قیمتِ میلیونی → همون قالبی که توی آگهی‌ها نوشته می‌شه (6250 → «6/250»)
+function fmtMillions(n){
+  const r = Math.round(n);
+  return r >= 1000 ? Math.floor(r / 1000) + '/' + String(r % 1000).padStart(3, '0') : String(r);
+}
+
+function priceVsBlock(l){
+  if (l.archived || l.block == null || !(l.price > 0)) return null;
+  const units = getBlockStats().get(l.zone + '|' + l.block) || [];
+  const me = unitId(l);
+  const others = units.filter(u => u.id !== me).map(u => u.price);
+  if (others.length < CMP_MIN_UNITS) return null;
+  const median = medianOf(others);
+  const pct = Math.round((l.price - median) / median * 100);
+  return { pct, median, min: Math.min(...others), max: Math.max(...others), n: others.length };
+}
+
+function cmpBadgeHtml(l){
+  const c = priceVsBlock(l);
+  if (!c || Math.abs(c.pct) < CMP_SHOW_PCT) return '';
+  const cheap = c.pct < 0;
+  return `<div class="meta cmp ${cheap ? 'cmp-low' : 'cmp-high'}">📊 ${Math.abs(c.pct)}٪ ${cheap ? 'ارزون‌تر' : 'گران‌تر'} از میانه‌ی بلوک</div>`;
+}
+
+function cmpDetailHtml(l){
+  const c = priceVsBlock(l);
+  if (!c) return '';
+  const rel = Math.abs(c.pct) < CMP_SHOW_PCT ? 'نزدیکِ میانه' : (c.pct < 0 ? `${-c.pct}٪ ارزون‌تر از میانه` : `${c.pct}٪ گران‌تر از میانه`);
+  return `<div class="dup-note" style="border-color:var(--line);">📊 مقایسه با بلوک ${esc(l.block)}: <b>${rel}</b><br>
+    میانه ${fmtMillions(c.median)} · کمترین ${fmtMillions(c.min)} · بیشترین ${fmtMillions(c.max)} (${c.n} واحدِ دیگه)<br>
+    <span style="opacity:.7;font-size:.78em;">تقریبی است؛ متراژ توی مقایسه نیست.</span></div>`;
+}
+
 // طبقه‌ی همکف عدد صفر است؛ همه‌جا به‌جای «۰» (که با «نامشخص» قاطی می‌شه) «همکف» نشون داده می‌شه.
 // باگ قبلی: کدهایی مثل `l.floor ? ... : ''` چون 0 در جاوااسکریپت falsy است، طبقه‌ی همکف را
 // اصلاً نشون نمی‌دادند؛ همه‌جا باید از همین تابع (یا چک صریح null/undefined) استفاده شود.
@@ -2921,6 +2993,7 @@ function listingCardHtml(l){
       <h3>${zoneLabel(l.zone)} · بلوک ${l.block ?? 'نامشخص'} ${dupBadge}${mediaBadge}${baleBadge}${dropBadge}${statusBadgeHtml(l)}</h3>
       <div class="meta">${floorLabel(l.floor)?('طبقه '+floorLabel(l.floor)+' · '):''}${esc(l.direction||'')}</div>
       ${price ? `<div class="price">💰 ${esc(price)}</div>` : ''}
+      ${cmpBadgeHtml(l)}
       ${l.phone ? `<div class="phone">📞 ${esc(l.phone)}</div>` : ''}
       <div class="time">${relTime(l.createdAt)}</div></div></div>`;
 }
@@ -2944,6 +3017,7 @@ function showDetail(id){
       ${doc.priceDrop ? `<div class="price" style="color:#2f8f5b;">📉 کاهش قیمت: از ${esc(doc.priceDrop.fromText)} به ${esc(doc.priceDrop.toText)}</div>` : ''}
       ${g.phone ? `<div class="phone"><a href="tel:${esc(g.phone)}">📞 ${esc(g.phone)}</a></div>` : ''}
     </div>
+    ${cmpDetailHtml(doc)}
     ${uploadsHtml}
     <div class="detail-label">متن اصلی آگهی (عین آنچه آپلود شده)</div>
     <pre class="raw-text" id="detailRaw"></pre>
