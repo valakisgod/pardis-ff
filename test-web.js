@@ -16,16 +16,17 @@ function grab(name) {
 function load(names, ctx) {
   const tagDefs = html.slice(html.indexOf('const NO_LOAN_RE'), html.indexOf('];', html.indexOf('const TAG_DEFS')) + 2);
   const tagIds = html.match(/const TAG_FILTER_IDS = [^;]+;/)[0];
-  const consts = tagDefs + '\n' + tagIds + '\nlet activeTags = new Set();\n' + ['CMP_MIN_UNITS', 'CMP_SHOW_PCT'].map(c => html.match(new RegExp('const ' + c + ' = [^;]+;'))[0]).join('\n');
-  const code = consts + '\nlet _blockStatsFor = null, _blockStats = null;\n' + names.map(grab).join('\n') + '\nthis.activeTags = activeTags;';
+  const life = ['STALE_DAYS', 'DAY_MS', 'TEHRAN_OFFSET_MS'].map(c => html.match(new RegExp('const ' + c + ' = [^;]+;'))[0]).join('\n') + '\nlet freshOnly = false;\n';
+  const consts = life + tagDefs + '\n' + tagIds + '\nlet activeTags = new Set();\n' + ['CMP_MIN_UNITS', 'CMP_SHOW_PCT'].map(c => html.match(new RegExp('const ' + c + ' = [^;]+;'))[0]).join('\n');
+  const code = consts + '\nlet _blockStatsFor = null, _blockStats = null;\n' + names.map(grab).join('\n') + '\nthis.activeTags = activeTags; this.setFresh = v => { freshOnly = v; };';
   vm.createContext(ctx); vm.runInContext(code, ctx); return ctx;
 }
 
 let failures = 0, n = 0;
 const assert = (c, m) => { n++; if (!c) { failures++; console.error('FAIL:', m); } };
 
-const ctx = load(['normalizeNumbers', 'normalizeChars', 'extractTags', 'displayTags', 'listingTags', 'matchesTags', 'tagsHtml', 'dedupKey', 'unitId', 'getBlockStats', 'medianOf', 'fmtMillions', 'priceVsBlock', 'cmpBadgeHtml', 'cmpDetailHtml'],
-  { allListings: [], esc: x => String(x) });
+const ctx = load(['lastSeenOf', 'daysSince', 'isStale', 'matchesFresh', 'staleBadgeHtml', 'timeLineHtml', 'relTime', 'tehranMidnightTimestamp', 'followUpTime', 'floorLabel', 'zoneLabel', 'followUpLabel', 'normalizeNumbers', 'normalizeChars', 'extractTags', 'displayTags', 'listingTags', 'matchesTags', 'tagsHtml', 'dedupKey', 'unitId', 'getBlockStats', 'medianOf', 'fmtMillions', 'priceVsBlock', 'cmpBadgeHtml', 'cmpDetailHtml'],
+  { allListings: [], esc: x => String(x), Intl, Date, Math });
 const L = (o) => Object.assign({ id: Math.random(), zone: 3, block: 12, floor: 1, direction: 'شمالی', price: 6000, phone: '0912', createdAt: '2026-10-01T00:00:00Z' }, o);
 const setAll = (arr) => { ctx.allListings = arr; };   // آرایه‌ی تازه = کش باطل می‌شه، مثل mergeListingSources
 
@@ -80,6 +81,31 @@ assert(pass(loanFull) && !pass(guar), 'وام به‌روز و تخلیه به�
 assert(ctx.tagsHtml(loanFull).includes('وام به‌روز') && !ctx.tagsHtml(loanFull).includes('>وام‌دار<'), 'کارت فقط برچسبِ دقیق‌تر را نشان می‌دهد');
 assert(ctx.tagsHtml(plain) === '', 'بدونِ برچسب، چیزی نشون داده نمی‌شه');
 ctx.activeTags.clear();
+
+// ---- چرخه‌ی عمر: آخرین تأیید، قدیمی، پیگیری ----
+const NOW = Date.parse('2026-10-20T12:00:00Z');
+const ago = (d) => new Date(NOW - d * 86400000).toISOString();
+assert(ctx.daysSince(ago(3), NOW) === 3 && ctx.daysSince('نامعتبر', NOW) === null, 'محاسبه‌ی روز');
+assert(ctx.isStale({ createdAt: ago(8) }, NOW) && !ctx.isStale({ createdAt: ago(6) }, NOW), 'مرزِ ۷ روز');
+assert(!ctx.isStale({ createdAt: ago(30), lastSeen: ago(1) }, NOW), 'پست‌شدنِ دوباره (آخرین تأیید تازه) یعنی قدیمی نیست');
+assert(ctx.isStale({ createdAt: ago(30), lastSeen: ago(9) }, NOW), 'آخرین تأییدِ قدیمی → قدیمی');
+assert(!ctx.isStale({ createdAt: ago(30), status: 'فروخته شد' }, NOW) && !ctx.isStale({ createdAt: ago(30), status: 'رزرو شد' }, NOW), 'فایل با وضعیت «قدیمی» نیست');
+assert(!ctx.isStale({}, NOW), 'بدونِ تاریخ قدیمی حساب نمی‌شه');
+ctx.setFresh(false); assert(ctx.matchesFresh({ createdAt: ago(40) }), 'بدونِ فیلتر همه رد می‌شن');
+ctx.setFresh(true);
+const realNow = Date.now; 
+assert(ctx.matchesFresh({ createdAt: new Date().toISOString() }) && !ctx.matchesFresh({ createdAt: ago(0 + 400) }), 'فیلترِ «فقط تازه‌ها»');
+ctx.setFresh(false);
+// خطِ زمانِ کارت
+const once = ctx.timeLineHtml({ createdAt: new Date().toISOString(), uploadCount: 1 });
+assert(once.includes('class="time"') && !once.includes('آخرین تأیید'), 'یک‌بار آپلود: زمانِ ساده');
+const rep2 = ctx.timeLineHtml({ createdAt: ago(10), lastSeen: ago(1), uploadCount: 3 });
+assert(rep2.includes('اولین بار') && rep2.includes('آخرین تأیید'), 'چندبار آپلود: اولین بار / آخرین تأیید');
+// ساعتِ یادآوریِ پیگیری: ۱۰ صبحِ تهران (= ۰۶:۳۰ UTC)، N روز بعد، و همیشه آینده
+const t1 = new Date(ctx.followUpTime(1, NOW));
+assert(t1.getUTCHours() === 6 && t1.getUTCMinutes() === 30, 'ساعتِ ۱۰ تهران: ' + t1.toISOString());
+assert(ctx.followUpTime(1, NOW) > NOW && ctx.followUpTime(7, NOW) - ctx.followUpTime(1, NOW) === 6 * 86400000, 'فاصله‌ی روزها');
+assert(ctx.followUpLabel({ zone: 3, block: 52, floor: 1, phone: '0912' }) === 'پیگیری: زون 3 · بلوک 52 · طبقه 1 — هنوز هست؟ 0912', 'برچسبِ یادآوری: ' + ctx.followUpLabel({ zone: 3, block: 52, floor: 1, phone: '0912' }));
 
 // قالبِ قیمت
 assert(ctx.fmtMillions(6250) === '6/250' && ctx.fmtMillions(8000) === '8/000' && ctx.fmtMillions(950) === '950', 'قالبِ قیمت');

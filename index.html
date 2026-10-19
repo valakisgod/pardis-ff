@@ -317,6 +317,9 @@
   .status-badge.status-negotiating{background:var(--brass-600);}
   .status-badge.status-sold{background:#6b6b6b;}
   /* نشانِ «این فایل خودکار از گروهِ بله خونده شده» — تا ادمین بدونه هنوز دستی تأیید/بازبینی نشده. */
+  .stale-badge{display:inline-block; font-size:.62rem; font-weight:700; background:#8a7a4a; color:#fff; border-radius:6px; padding:1px 7px; margin-right:6px; vertical-align:middle;}
+  .followup{display:flex; gap:8px; flex-wrap:wrap; margin:10px 0;}
+  .followup button{flex:1; width:auto; min-width:90px; font-size:.78rem;}
   .tag-chip{display:inline-block; font-size:.66rem; background:var(--bg); border:1px solid var(--line); color:var(--brass-400); border-radius:999px; padding:1px 8px; margin:3px 0 0 4px;}
   .tag-filters .chip.on{outline:2px solid var(--brass-400);}
   .cmp-low{color:#2f8f5b; font-weight:700;}
@@ -1426,7 +1429,8 @@ function tagsHtml(l){
   return shown.length ? `<div>${shown.map(d => `<span class="tag-chip">${esc(d.label)}</span>`).join('')}</div>` : '';
 }
 function renderTagFilters(){
-  const html = TAG_FILTER_IDS.map(id => {
+  const freshChip = `<div class="chip${freshOnly ? ' on' : ''}" onclick="toggleFreshOnly()">🕒 فقط تازه‌ها (${STALE_DAYS} روز)</div>`;
+  const html = freshChip + TAG_FILTER_IDS.map(id => {
     const d = TAG_DEFS.find(x => x.id === id);
     return `<div class="chip${activeTags.has(id) ? ' on' : ''}" onclick="toggleTagFilter('${id}')">${esc(d.label)}</div>`;
   }).join('');
@@ -1434,6 +1438,7 @@ function renderTagFilters(){
     const el = document.getElementById(elId); if (el) el.innerHTML = html;
   }
 }
+function toggleFreshOnly(){ freshOnly = !freshOnly; renderTagFilters(); render(); renderManual(); }
 function toggleTagFilter(id){
   if (activeTags.has(id)) activeTags.delete(id); else activeTags.add(id);
   renderTagFilters(); render(); renderManual();
@@ -1487,6 +1492,7 @@ let eventsText = '';
 // محدودیت مهم: این یک صفحه‌ی وب است، نه اپ گوشی؛ تا وقتی این صفحه روی مرورگر باز باشه (حتی تب پس‌زمینه)
 // سر وقت با صدا/نوتیف یادآوری می‌کنه، ولی اگه مرورگر کاملاً بسته باشه نمی‌تونه پیام بفرسته.
 let alarms = [];
+let alarmsLoaded = false;   // تا اولین دریافت از سرور، افزودنِ یادآوری قفله تا آرایه‌ی خالی روی داده‌ی واقعی نوشته نشه
 let alarmContactId = null;
 // رویدادها (لیست مجزا، قابل ویرایش/حذف) و مخاطبین — هر دو روی مسیر events نگه داشته می‌شوند
 let eventNotes = [], editingEventNoteId = null;
@@ -2460,7 +2466,7 @@ function renderManual(){
 
   blockWrapEl.classList.add('hidden'); resultsWrapEl.classList.remove('hidden');
   const active = allListings.filter(l => !l.archived);
-  const items = groupListings(active.filter(l => l.zone === manualZone && l.block === manualBlock)).filter(matchesTags)
+  const items = groupListings(active.filter(l => l.zone === manualZone && l.block === manualBlock)).filter(matchesTags).filter(matchesFresh)
     .sort((a,b) => (a.price ?? Infinity) - (b.price ?? Infinity));
   document.getElementById('manualList').innerHTML = items.length
     ? items.map(listingCardHtml).join('')
@@ -2915,6 +2921,61 @@ function relTime(iso){
   if (diff < 86400) return Math.floor(diff/3600)+' ساعت پیش';
   return Math.floor(diff/86400)+' روز پیش';
 }
+
+// ---------------------------------------------------------------------
+// چرخه‌ی عمرِ فایل: «آخرین تأیید» = تازه‌ترین باری که همین فایل (هم‌کلید) دیده/آپلود شده؛ پست‌شدنِ
+// دوباره یعنی هنوز موجوده. اگه از آخرین تأیید STALE_DAYS روز گذشته و وضعیتی (رزرو/فروخته) هم نداره،
+// «احتمالاً قدیمی» حساب می‌شه. فقط نشونه‌ست؛ چیزی خودکار حذف یا آرشیو نمی‌شه.
+// ---------------------------------------------------------------------
+const STALE_DAYS = 7;
+const DAY_MS = 24 * 60 * 60 * 1000;
+let freshOnly = false;
+
+function lastSeenOf(l){ return l.lastSeen || l.createdAt || null; }
+function daysSince(iso, nowMs){
+  if (!iso) return null;
+  const t = new Date(iso).getTime();
+  return isNaN(t) ? null : Math.max(0, Math.floor(((nowMs == null ? Date.now() : nowMs) - t) / DAY_MS));
+}
+function isStale(l, nowMs){
+  if (l.status) return false;   // رزرو/فروخته/مذاکره: وضعیتش مشخصه، «قدیمی» نیست
+  const d = daysSince(lastSeenOf(l), nowMs);
+  return d !== null && d >= STALE_DAYS;
+}
+function matchesFresh(l){ return !freshOnly || !isStale(l); }
+function staleBadgeHtml(l){
+  return isStale(l) ? `<span class="stale-badge" title="بیش از ${STALE_DAYS} روز از آخرین تأیید گذشته">⏳ احتمالاً قدیمی</span>` : '';
+}
+// خطِ زمانِ کارت: فایلِ چندبارآپلودشده «اولین بار / آخرین تأیید» رو نشون می‌ده، وگرنه همون زمانِ ساده
+function timeLineHtml(l){
+  if ((l.uploadCount || 1) > 1 && l.lastSeen && l.lastSeen !== l.createdAt)
+    return `<div class="time">اولین بار ${relTime(l.createdAt)} · آخرین تأیید ${relTime(l.lastSeen)}</div>`;
+  return `<div class="time">${relTime(l.createdAt)}</div>`;
+}
+
+// یادآوریِ پیگیری («زنگ بزن ببین هنوز هست؟»): ساعتِ ۱۰ صبحِ تهران، N روز بعد
+function followUpTime(days, nowMs){
+  const base = tehranMidnightTimestamp(-days);
+  const t = base + 10 * 60 * 60 * 1000;
+  return t > (nowMs == null ? Date.now() : nowMs) ? t : (nowMs == null ? Date.now() : nowMs) + 60 * 60 * 1000;
+}
+function followUpLabel(l){
+  const parts = [zoneLabel(l.zone)];
+  if (l.block != null) parts.push('بلوک ' + l.block);
+  if (floorLabel(l.floor)) parts.push('طبقه ' + floorLabel(l.floor));
+  return 'پیگیری: ' + parts.join(' · ') + ' — هنوز هست؟' + (l.phone ? ' ' + l.phone : '');
+}
+function addFollowUp(id, days){
+  const l = allListings.find(x => String(x.id) === String(id));
+  if (!l || !db) return;
+  if (!alarmsLoaded){ alert('هنوز یادآوری‌ها از سرور نیومدن؛ چند ثانیه بعد دوباره امتحان کن.'); return; }
+  const time = new Date(followUpTime(days)).toISOString();
+  alarms = [...alarms, { id: 'al' + Date.now() + Math.random().toString(36).slice(2, 6), time, label: followUpLabel(l), firedAt: null, contactId: null, dealId: null }];
+  addNotificationEntry('alarm', '⏰ یادآوریِ پیگیری برای ' + formatAlarmTime(time) + ' تنظیم شد.');
+  persistAlarms(); renderAlarms();
+  const box = document.getElementById('followUpDone');
+  if (box) box.textContent = '✅ یادآوری تنظیم شد: ' + formatAlarmTime(time);
+}
 function esc(v){
   return String(v ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 }
@@ -3036,7 +3097,8 @@ function buildGroup(docs){
   const withPhoto = sorted.find(d => d.photoUrl);
   const withVideo = sorted.find(d => d.videoUrl);
   const withStatus = [...sorted].reverse().find(d => d.status);
-  return { ...first, raw: withRaw ? withRaw.raw : '', priceText: withPriceText ? withPriceText.priceText : null,
+  const last = sorted[sorted.length - 1];
+  return { ...first, lastSeen: last.createdAt || first.createdAt, raw: withRaw ? withRaw.raw : '', priceText: withPriceText ? withPriceText.priceText : null,
            photoUrl: withPhoto ? withPhoto.photoUrl : null, videoUrl: withVideo ? withVideo.videoUrl : null,
            status: withStatus ? withStatus.status : null,
            uploadCount: sorted.length, uploads: sorted.map(d => d.createdAt) };
@@ -3063,13 +3125,13 @@ function listingCardHtml(l){
   return `<div class="u-card" onclick="showDetail('${esc(l.id)}')">
       <button class="save-btn${saved?' saved':''}" onclick="event.stopPropagation(); toggleSaveListing('${esc(l.id)}')">🔖</button>
       <div class="u-card-body">
-      <h3>${zoneLabel(l.zone)} · بلوک ${l.block ?? 'نامشخص'} ${dupBadge}${mediaBadge}${baleBadge}${dropBadge}${statusBadgeHtml(l)}</h3>
+      <h3>${zoneLabel(l.zone)} · بلوک ${l.block ?? 'نامشخص'} ${dupBadge}${mediaBadge}${baleBadge}${dropBadge}${staleBadgeHtml(l)}${statusBadgeHtml(l)}</h3>
       <div class="meta">${floorLabel(l.floor)?('طبقه '+floorLabel(l.floor)+' · '):''}${esc(l.direction||'')}</div>
       ${price ? `<div class="price">💰 ${esc(price)}</div>` : ''}
       ${cmpBadgeHtml(l)}
       ${tagsHtml(l)}
       ${l.phone ? `<div class="phone">📞 ${esc(l.phone)}</div>` : ''}
-      <div class="time">${relTime(l.createdAt)}</div></div></div>`;
+      ${timeLineHtml(l)}</div></div>`;
 }
 
 function showDetail(id){
@@ -3092,6 +3154,14 @@ function showDetail(id){
       ${g.phone ? `<div class="phone"><a href="tel:${esc(g.phone)}">📞 ${esc(g.phone)}</a></div>` : ''}
     </div>
     ${cmpDetailHtml(doc)}
+    ${isStale(g) ? `<div class="dup-note">⏳ از آخرین تأیید این فایل ${daysSince(lastSeenOf(g))} روز گذشته؛ شاید دیگه موجود نباشه.</div>` : ''}
+    <div class="detail-label">یادآوریِ پیگیری (زنگ بزن ببین هنوز هست؟)</div>
+    <div class="followup">
+      <button type="button" onclick="addFollowUp('${esc(g.id)}', 1)">فردا</button>
+      <button type="button" onclick="addFollowUp('${esc(g.id)}', 3)">۳ روز بعد</button>
+      <button type="button" onclick="addFollowUp('${esc(g.id)}', 7)">هفته‌ی بعد</button>
+    </div>
+    <div class="hint" id="followUpDone"></div>
     ${uploadsHtml}
     <div class="detail-label">متن اصلی آگهی (عین آنچه آپلود شده)</div>
     <pre class="raw-text" id="detailRaw"></pre>
@@ -3378,7 +3448,7 @@ function renderArchive(){
 function render(){
   const active = allListings.filter(l=>!l.archived);
   // اکسپلور فقط مالِ ۵ زونِ فاز ۱۱ است؛ کوهسار و غدیر هرکدوم بخشِ مخصوصِ خودشون رو دارن (renderGhadir).
-  const visible = groupListings(active).filter(l => l.zone !== 'ghadir' && l.zone !== 'kuhsar' && (!zoneFilter || String(l.zone) === zoneFilter) && matchesSearch(l) && inPriceRange(l) && matchesTags(l));
+  const visible = groupListings(active).filter(l => l.zone !== 'ghadir' && l.zone !== 'kuhsar' && (!zoneFilter || String(l.zone) === zoneFilter) && matchesSearch(l) && inPriceRange(l) && matchesTags(l) && matchesFresh(l));
   // ترتیب اکسپلور طبق دکمه‌ی فعال: بلوک (پیش‌فرض، زون سپس شماره بلوک)، قیمت (ارزان به گران) یا زمان (جدیدترین اول)
   let sorted;
   if (sortMode === 'price'){
@@ -3851,6 +3921,7 @@ async function init(){
   db.doc('events/alarms').onSnapshot(
     doc => {
       alarms = (doc.exists && doc.data().items) || [];
+      alarmsLoaded = true;
       if (userTab === 'events'){ renderAlarms(); renderContacts(); }
     },
     err => {}
