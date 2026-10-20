@@ -4262,6 +4262,7 @@ function countRuleMatches(rule){
 const TODAY_WINDOW_MS = 24 * 60 * 60 * 1000;
 const TODAY_SECTION_LIMIT = 5;
 const TODAY_CHEAP_PCT = -10;
+const TODAY_LATE_KEEP_DAYS = 7;   // یادآوریِ زنگ‌نخوره‌ی قدیمی‌تر از این دیگه «پیگیریِ امروز» نیست (وگرنه همیشه بالای لیست می‌موند)
 
 function buildTodaySummary({ listings, rules, alarms, nowMs, buyersFor, cmpFor, tagsFor }){
   const since = nowMs - TODAY_WINDOW_MS;
@@ -4278,7 +4279,8 @@ function buildTodaySummary({ listings, rules, alarms, nowMs, buyersFor, cmpFor, 
     .filter(x => x.listings.length);
   // پیگیری‌ها: زنگ‌نخورده‌هایی که زمانشون تا آخرِ امروزِ تهران رسیده (گذشته‌ها هم شاملن)
   const endOfToday = tehranMidnightTimestamp(-1, nowMs);
-  const followUps = (alarms || []).filter(a => a && a.time && !a.firedAt && new Date(a.time).getTime() < endOfToday)
+  const lateFloor = nowMs - TODAY_LATE_KEEP_DAYS * 24 * 60 * 60 * 1000;
+  const followUps = (alarms || []).filter(a => a && a.time && !a.firedAt && new Date(a.time).getTime() < endOfToday && new Date(a.time).getTime() >= lateFloor)
     .sort((a, b) => new Date(a.time) - new Date(b.time))
     .map(a => ({ ...a, late: new Date(a.time).getTime() < nowMs }));
   const stale = groups.filter(l => isStale(l, nowMs)).length;

@@ -17,7 +17,7 @@ function grab(name) {
 function load(names, ctx) {
   const tagDefs = html.slice(html.indexOf('const NO_LOAN_RE'), html.indexOf('];', html.indexOf('const TAG_DEFS')) + 2);
   const tagIds = html.match(/const TAG_FILTER_IDS = [^;]+;/)[0];
-  const baleConsts = ['BALE_KEEP_DAYS', 'BALE_QUERY_LIMIT', 'TODAY_WINDOW_MS', 'TODAY_SECTION_LIMIT', 'TODAY_CHEAP_PCT'].map(c => html.match(new RegExp('const ' + c + ' = [^;]+;'))[0]).join('\n') + '\n';
+  const baleConsts = ['BALE_KEEP_DAYS', 'BALE_QUERY_LIMIT', 'TODAY_WINDOW_MS', 'TODAY_SECTION_LIMIT', 'TODAY_CHEAP_PCT', 'TODAY_LATE_KEEP_DAYS'].map(c => html.match(new RegExp('const ' + c + ' = [^;]+;'))[0]).join('\n') + '\n';
   const life = baleConsts + ['STALE_DAYS', 'DAY_MS', 'TEHRAN_OFFSET_MS'].map(c => html.match(new RegExp('const ' + c + ' = [^;]+;'))[0]).join('\n') + '\nlet freshOnly = false;\n';
   const consts = life + tagDefs + '\n' + tagIds + '\nlet activeTags = new Set();\n' + ['CMP_MIN_UNITS', 'CMP_SHOW_PCT'].map(c => html.match(new RegExp('const ' + c + ' = [^;]+;'))[0]).join('\n');
   const code = consts + '\nlet _blockStatsFor = null, _blockStats = null;\n' + names.map(grab).join('\n') + '\nthis.activeTags = activeTags; this.setFresh = v => { freshOnly = v; };';
@@ -190,6 +190,11 @@ assert(parity, 'منطقِ فیلترِ وب و ربات باید دقیقاً �
   assert(S.matches.length === 2 && S.matches.every(m => m.buyers.length === 1), 'خریدارِ مناسبِ فایل‌های جدید: ' + S.matches.length);
   assert(S.ruleHits.length === 1 && S.ruleHits[0].rule.id === 'r' && S.ruleHits[0].listings[0].id === '5', 'فقط فیلترِ دارای نتیجه');
   assert(S.followUps.map(a => a.id).join() === 'a1,a2' && S.followUps[0].late === true && S.followUps[1].late === false, 'پیگیری‌های امروز + گذشته، نه فردا/زنگ‌خورده: ' + S.followUps.map(a => a.id));
+  // یادآوریِ زنگ‌نخورده‌ی ۸ روز پیش دیگه توی پیگیری‌های امروز نیست، ولی ۶ روز پیش هنوز هست
+  const old = ctx.buildTodaySummary({ listings: [], nowMs: NOWT, rules: [], alarms: [
+    { id: 'o8', time: new Date(NOWT - 8 * 86400000).toISOString(), firedAt: null }, { id: 'o6', time: new Date(NOWT - 6 * 86400000).toISOString(), firedAt: null } ],
+    buyersFor: () => [], cmpFor: () => null, tagsFor: () => [] });
+  assert(old.followUps.map(a => a.id).join() === 'o6', 'مرزِ ۷ روزِ یادآوریِ گذشته: ' + old.followUps.map(a => a.id));
   const empty = ctx.buildTodaySummary({ listings: [], nowMs: NOWT, rules: [], alarms: [], buyersFor: () => [], cmpFor: () => null, tagsFor: () => [] });
   assert(empty.fresh.length === 0 && empty.followUps.length === 0 && empty.stale === 0, 'حالتِ خالی کرش نمی‌کنه');
   // پایانِ «امروز» به وقتِ تهران: ۲۰ اکتبر ۲۳:۵۰ تهران هنوز امروزه، ۲۱ اکتبر ۰۰:۱۰ تهران نه
