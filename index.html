@@ -262,6 +262,14 @@
   .push-row small{display:block; color:var(--sub); font-size:.72rem; margin-top:3px; line-height:1.6; font-weight:400;}
   .push-row input{flex:none; width:22px; height:22px; accent-color:var(--brass-400);}
   .push-status{min-height:1.4em; margin:10px 0; font-size:.78rem; line-height:1.7; color:var(--brass-300);}
+  .today-tiles{display:grid; grid-template-columns:1fr 1fr; gap:8px; padding:12px 14px 4px;}
+  .today-tile{background:var(--surface); border:1px solid var(--line); border-radius:12px; padding:10px 12px; text-align:center;}
+  .today-tile b{display:block; font-size:1.4rem; color:var(--brass-400);}
+  .today-tile span{font-size:.72rem; color:var(--sub);}
+  .today-h{padding:14px 14px 2px; font-size:.9rem; font-weight:700;}
+  .today-note{padding:2px 14px; font-size:.74rem; color:var(--sub);}
+  .today-row{background:var(--bg); border:1px solid var(--line); border-radius:10px; padding:8px 12px; margin:6px 14px; font-size:.78rem;}
+  .today-late{color:#b0503f; font-weight:700;}
   .rule-item{display:flex; justify-content:space-between; align-items:center; gap:8px; background:var(--bg); border:1px solid var(--line); border-radius:10px; padding:8px 10px; margin-top:6px; font-size:.78rem;}
   .rule-item button{width:auto; flex:none; padding:2px 10px; font-size:.75rem;}
   .rule-form{border-top:1px solid var(--line); margin-top:10px; padding-top:8px;}
@@ -541,6 +549,7 @@
       <h1>فاز ۱۱ پردیس</h1>
       <button class="nav-burger" onclick="toggleNavMenu()">☰</button>
       <div class="nav-menu hidden" id="navMenu">
+        <button id="navToday" onclick="selectNavTab('today')">☀️ امروز</button>
         <button id="navSaved" onclick="selectNavTab('saved')">ذخیره‌ها</button>
         <button id="navEvents" onclick="selectNavTab('events')">رویدادها</button>
         <button id="navMap" onclick="selectNavTab('map')">نقشه</button>
@@ -548,6 +557,8 @@
       </div>
     </div>
   </div>
+
+  <div id="todayPanel" class="hidden"><div id="todayBody"></div></div>
 
   <div id="explorePanel">
     <div class="u-search"><input id="searchInput" placeholder="جستجو: بلوک، طبقه، جهت، قیمت، شماره تماس…" oninput="onSearchInput(this.value)"></div>
@@ -1231,9 +1242,9 @@ const AUTO_DELETE_DAYS = 9;
 // ایران از DST استفاده نمی‌کند؛ آفست تهران همیشه ۳:۳۰+ است، پس نیمه‌شبِ تهران = UTC منهای ۳:۳۰
 const TEHRAN_OFFSET_MS = (3 * 60 + 30) * 60 * 1000;
 
-function tehranMidnightTimestamp(daysAgo){
+function tehranMidnightTimestamp(daysAgo, nowMs){
   const fmt = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Tehran', year: 'numeric', month: '2-digit', day: '2-digit' });
-  const parts = fmt.formatToParts(new Date());
+  const parts = fmt.formatToParts(nowMs == null ? new Date() : new Date(nowMs));
   const y = +parts.find(p => p.type === 'year').value;
   const m = +parts.find(p => p.type === 'month').value;
   const d = +parts.find(p => p.type === 'day').value;
@@ -1555,9 +1566,11 @@ function setUserTab(tab){
   document.getElementById('bnGhadir').classList.toggle('on', tab==='ghadir');
   document.getElementById('bnBuyers').classList.toggle('on', tab==='buyers');
   // دکمه‌های منوی همبرگریِ بالا (ذخیره‌ها، رویدادها، نقشه)
+  document.getElementById('navToday').classList.toggle('on', tab==='today');
   document.getElementById('navSaved').classList.toggle('on', tab==='saved');
   document.getElementById('navEvents').classList.toggle('on', tab==='events');
   document.getElementById('navMap').classList.toggle('on', tab==='map');
+  document.getElementById('todayPanel').classList.toggle('hidden', tab!=='today');
   document.getElementById('explorePanel').classList.toggle('hidden', tab!=='explore');
   document.getElementById('manualPanel').classList.toggle('hidden', tab!=='manual');
   document.getElementById('buyersPanel').classList.toggle('hidden', tab!=='buyers');
@@ -1565,6 +1578,7 @@ function setUserTab(tab){
   document.getElementById('savedPanel').classList.toggle('hidden', tab!=='saved');
   document.getElementById('eventsPanel').classList.toggle('hidden', tab!=='events');
   document.getElementById('mapPanel').classList.toggle('hidden', tab!=='map');
+  if (tab === 'today'){ renderToday(); }
   if (tab === 'manual'){ manualZone = null; manualBlock = null; renderManual(); }
   if (tab === 'buyers'){ renderBuyers(); }
   if (tab === 'ghadir'){ renderGhadir(); }
@@ -3988,6 +4002,7 @@ async function fetchBaleListings(){
 function mergeListingSources(){
   allListings = ownListings.concat(baleListings);
   render();
+  if (userTab === 'today') renderToday();
   if (userTab === 'ghadir') renderGhadir();
 }
 
@@ -4027,7 +4042,7 @@ async function init(){
   pushQuietRefresh();
 
   db.collection('buyers').orderBy('createdAt','desc').limit(300).onSnapshot(
-    snap => { allBuyers = snap.docs.map(d => ({ id:d.id, ...d.data() })); renderBuyers(); renderSaved(); },
+    snap => { allBuyers = snap.docs.map(d => ({ id:d.id, ...d.data() })); renderBuyers(); renderSaved(); if (userTab === 'today') renderToday(); },
     err => { document.getElementById('buyersList').innerHTML = '<div class="empty">خطا در اتصال به داده‌ها: '+err.code+'</div>'; }
   );
 
@@ -4042,7 +4057,7 @@ async function init(){
   );
 
   db.doc('events/alert_rules').onSnapshot(
-    doc => { alertRules = (doc.exists && doc.data().items) || []; alertRulesLoaded = true; renderAlertRules(); },
+    doc => { alertRules = (doc.exists && doc.data().items) || []; alertRulesLoaded = true; renderAlertRules(); if (userTab === 'today') renderToday(); },
     err => {}
   );
 
@@ -4050,6 +4065,7 @@ async function init(){
     doc => {
       alarms = (doc.exists && doc.data().items) || [];
       alarmsLoaded = true;
+      if (userTab === 'today') renderToday();
       if (userTab === 'events'){ renderAlarms(); renderContacts(); }
     },
     err => {}
@@ -4236,6 +4252,78 @@ function describeRule(rule){
 // فایل‌های فعلی‌ای که با یه فیلتر می‌خونن (برای نشون‌دادنِ «الان N فایل داره»)
 function countRuleMatches(rule){
   return groupListings(allListings.filter(l => !l.archived)).filter(l => adMatchesRule({ zone: l.zone, price: l.price, tags: listingTags(l) }, rule)).length;
+}
+
+// ---------------------------------------------------------------------
+// داشبوردِ «امروز»: خلاصه‌ی ۲۴ ساعتِ اخیر. «جدید» یعنی اولین‌بارِ دیده‌شدنِ فایل توی ۲۴ ساعتِ اخیر
+// (فایلِ قدیمیِ دوباره‌پست‌شده جدید حساب نمی‌شه). بخش‌ها: جدیدها به‌تفکیکِ زون، کاهش قیمت، فایلِ
+// ارزون‌تر از میانه‌ی بلوک (≥۱۰٪)، خریدارِ مناسبِ فایل‌های جدید، فیلترهای من، پیگیری‌های سررسید.
+// ---------------------------------------------------------------------
+const TODAY_WINDOW_MS = 24 * 60 * 60 * 1000;
+const TODAY_SECTION_LIMIT = 5;
+const TODAY_CHEAP_PCT = -10;
+
+function buildTodaySummary({ listings, rules, alarms, nowMs, buyersFor, cmpFor, tagsFor }){
+  const since = nowMs - TODAY_WINDOW_MS;
+  const groups = groupListings((listings || []).filter(l => !l.archived));
+  const fresh = groups.filter(l => { const t = new Date(l.createdAt).getTime(); return !isNaN(t) && t >= since; })
+    .sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt)));
+  const byZone = {};
+  for (const l of fresh) byZone[l.zone] = (byZone[l.zone] || 0) + 1;
+  const drops = fresh.filter(l => l.priceDrop);
+  const cheap = fresh.filter(l => { const c = cmpFor(l); return c && c.pct <= TODAY_CHEAP_PCT; });
+  const matches = [];
+  for (const l of fresh){ const bs = buyersFor(l); if (bs.length) matches.push({ listing: l, buyers: bs }); }
+  const ruleHits = (rules || []).map(rule => ({ rule, listings: fresh.filter(l => adMatchesRule({ zone: l.zone, price: l.price, tags: tagsFor(l) }, rule)) }))
+    .filter(x => x.listings.length);
+  // پیگیری‌ها: زنگ‌نخورده‌هایی که زمانشون تا آخرِ امروزِ تهران رسیده (گذشته‌ها هم شاملن)
+  const endOfToday = tehranMidnightTimestamp(-1, nowMs);
+  const followUps = (alarms || []).filter(a => a && a.time && !a.firedAt && new Date(a.time).getTime() < endOfToday)
+    .sort((a, b) => new Date(a.time) - new Date(b.time))
+    .map(a => ({ ...a, late: new Date(a.time).getTime() < nowMs }));
+  const stale = groups.filter(l => isStale(l, nowMs)).length;
+  return { fresh, byZone, drops, cheap, matches, ruleHits, followUps, stale };
+}
+
+function todaySectionHtml(title, items, renderItem, total){
+  const shown = items.slice(0, TODAY_SECTION_LIMIT).map(renderItem).join('');
+  const more = total > TODAY_SECTION_LIMIT ? `<div class="today-note">و ${total - TODAY_SECTION_LIMIT} مورد دیگه — توی اکسپلور (مرتب بر اساس زمان) ببین.</div>` : '';
+  return `<div class="today-h">${title} (${total})</div><div class="u-list">${shown}</div>${more}`;
+}
+
+function goExploreNewest(){
+  sortMode = 'time';
+  document.querySelectorAll('#sortFilters .chip').forEach(c => c.classList.toggle('on', c.dataset.sort === 'time'));
+  setUserTab('explore'); render();
+}
+
+function renderToday(){
+  const box = document.getElementById('todayBody');
+  if (!box) return;
+  const S = buildTodaySummary({ listings: allListings, rules: alertRules, alarms, nowMs: Date.now(), buyersFor: findMatchingBuyers, cmpFor: priceVsBlock, tagsFor: listingTags });
+  const zoneLine = Object.keys(S.byZone).sort().map(z => `${zoneLabel(z === 'kuhsar' || z === 'ghadir' ? z : +z)}: ${S.byZone[z]}`).join(' · ');
+  let html = `<div class="today-tiles">
+    <div class="today-tile"><b>${S.fresh.length}</b><span>فایلِ جدید (۲۴ ساعت)</span></div>
+    <div class="today-tile"><b>${S.drops.length}</b><span>کاهش قیمت</span></div>
+    <div class="today-tile"><b>${S.matches.length}</b><span>فایل با خریدارِ مناسب</span></div>
+    <div class="today-tile"><b>${S.cheap.length}</b><span>ارزون‌تر از بلوک</span></div>
+  </div>`;
+  if (zoneLine) html += `<div class="today-note">${esc(zoneLine)}</div>`;
+  if (S.fresh.length) html += `<div class="today-note"><a href="#" onclick="goExploreNewest(); return false;">همه‌ی جدیدها در اکسپلور ←</a></div>`;
+  else html += '<div class="today-note">۲۴ ساعتِ اخیر فایلِ جدیدی نیومده.</div>';
+
+  if (S.followUps.length){
+    html += `<div class="today-h">⏰ پیگیری‌های امروز (${S.followUps.length})</div>` + S.followUps.slice(0, 8).map(a =>
+      `<div class="today-row">${a.late ? '<span class="today-late">گذشته · </span>' : ''}${esc(formatAlarmTime(a.time))} — ${esc(a.label || 'یادآوری')}</div>`).join('')
+      + `<div class="today-note"><a href="#" onclick="selectNavTab('events'); selectEvSubTab('alarms'); return false;">همه‌ی یادآوری‌ها ←</a></div>`;
+  }
+  if (S.drops.length) html += todaySectionHtml('📉 کاهش قیمت', S.drops, listingCardHtml, S.drops.length);
+  if (S.matches.length) html += todaySectionHtml('🙋 خریدارِ مناسب', S.matches, m => listingCardHtml(m.listing)
+      + `<div class="today-row">${m.buyers.slice(0, 3).map(b => esc(b.phone || 'بدون شماره') + ' — ' + esc(buyerSnippet(b.text))).join('<br>')}${m.buyers.length > 3 ? '<br>…' : ''}</div>`, S.matches.length);
+  for (const h of S.ruleHits) html += todaySectionHtml('🎯 ' + esc(describeRule(h.rule)), h.listings, listingCardHtml, h.listings.length);
+  if (S.cheap.length) html += todaySectionHtml('📊 ارزون‌تر از میانه‌ی بلوک', S.cheap, listingCardHtml, S.cheap.length);
+  if (S.stale) html += `<div class="today-note" style="margin-top:12px;">⏳ ${S.stale} فایل بیش از ${STALE_DAYS} روز تأیید نشده‌اند (احتمالاً قدیمی).</div>`;
+  box.innerHTML = html;
 }
 
 function renderRuleForm(){

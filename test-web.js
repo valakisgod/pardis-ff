@@ -8,7 +8,8 @@ function grab(name) {
   const i = html.indexOf('function ' + name + '(');
   if (i < 0) throw new Error('تابع پیدا نشد: ' + name);
   let d = 0;
-  for (let k = html.indexOf('{', i); k < html.length; k++) {
+  const m = /\)\s*\{/.exec(html.slice(i));   // «){» پایانِ پارامترها؛ بدنه‌ی تابع از همین‌جا شروع می‌شه (پارامترِ destructure شده هم اشکالی نداره)
+  for (let k = i + m.index + m[0].length - 1; k < html.length; k++) {
     if (html[k] === '{') d++;
     else if (html[k] === '}' && --d === 0) return html.slice(i, k + 1);
   }
@@ -16,7 +17,7 @@ function grab(name) {
 function load(names, ctx) {
   const tagDefs = html.slice(html.indexOf('const NO_LOAN_RE'), html.indexOf('];', html.indexOf('const TAG_DEFS')) + 2);
   const tagIds = html.match(/const TAG_FILTER_IDS = [^;]+;/)[0];
-  const baleConsts = ['BALE_KEEP_DAYS', 'BALE_QUERY_LIMIT'].map(c => html.match(new RegExp('const ' + c + ' = [^;]+;'))[0]).join('\n') + '\n';
+  const baleConsts = ['BALE_KEEP_DAYS', 'BALE_QUERY_LIMIT', 'TODAY_WINDOW_MS', 'TODAY_SECTION_LIMIT', 'TODAY_CHEAP_PCT'].map(c => html.match(new RegExp('const ' + c + ' = [^;]+;'))[0]).join('\n') + '\n';
   const life = baleConsts + ['STALE_DAYS', 'DAY_MS', 'TEHRAN_OFFSET_MS'].map(c => html.match(new RegExp('const ' + c + ' = [^;]+;'))[0]).join('\n') + '\nlet freshOnly = false;\n';
   const consts = life + tagDefs + '\n' + tagIds + '\nlet activeTags = new Set();\n' + ['CMP_MIN_UNITS', 'CMP_SHOW_PCT'].map(c => html.match(new RegExp('const ' + c + ' = [^;]+;'))[0]).join('\n');
   const code = consts + '\nlet _blockStatsFor = null, _blockStats = null;\n' + names.map(grab).join('\n') + '\nthis.activeTags = activeTags; this.setFresh = v => { freshOnly = v; };';
@@ -26,7 +27,7 @@ function load(names, ctx) {
 let failures = 0, n = 0;
 const assert = (c, m) => { n++; if (!c) { failures++; console.error('FAIL:', m); } };
 
-const ctx = load(['parsePriceToMillions', 'adMatchesRule', 'describeRule', 'fsValueToJs', 'fsFieldsToObj', 'baleQueryBody', 'parseRunQuery', 'mapBaleDoc', 'mergeBale', 'lastSeenOf', 'daysSince', 'isStale', 'matchesFresh', 'staleBadgeHtml', 'timeLineHtml', 'relTime', 'tehranMidnightTimestamp', 'followUpTime', 'floorLabel', 'zoneLabel', 'followUpLabel', 'normalizeNumbers', 'normalizeChars', 'extractTags', 'displayTags', 'listingTags', 'matchesTags', 'tagsHtml', 'dedupKey', 'unitId', 'getBlockStats', 'medianOf', 'fmtMillions', 'priceVsBlock', 'cmpBadgeHtml', 'cmpDetailHtml'],
+const ctx = load(['buildTodaySummary', 'groupListings', 'buildGroup', 'parsePriceToMillions', 'adMatchesRule', 'describeRule', 'fsValueToJs', 'fsFieldsToObj', 'baleQueryBody', 'parseRunQuery', 'mapBaleDoc', 'mergeBale', 'lastSeenOf', 'daysSince', 'isStale', 'matchesFresh', 'staleBadgeHtml', 'timeLineHtml', 'relTime', 'tehranMidnightTimestamp', 'followUpTime', 'floorLabel', 'zoneLabel', 'followUpLabel', 'normalizeNumbers', 'normalizeChars', 'extractTags', 'displayTags', 'listingTags', 'matchesTags', 'tagsHtml', 'dedupKey', 'unitId', 'getBlockStats', 'medianOf', 'fmtMillions', 'priceVsBlock', 'cmpBadgeHtml', 'cmpDetailHtml'],
   { allListings: [], esc: x => String(x), Intl, Date, Math });
 const L = (o) => Object.assign({ id: Math.random(), zone: 3, block: 12, floor: 1, direction: 'شمالی', price: 6000, phone: '0912', createdAt: '2026-10-01T00:00:00Z' }, o);
 const setAll = (arr) => { ctx.allListings = arr; };   // آرایه‌ی تازه = کش باطل می‌شه، مثل mergeListingSources
@@ -151,6 +152,79 @@ for (const r of rulesToTry) {
   for (const a of adsToTry) if (ctx.adMatchesRule(a, full) !== bot.adMatchesRule(a, full)) { parity = false; console.error('match parity:', JSON.stringify([full, a])); }
 }
 assert(parity, 'منطقِ فیلترِ وب و ربات باید دقیقاً یکی باشه');
+
+// ---- داشبوردِ «امروز» ----
+{
+  const NOWT = Date.parse('2026-10-20T05:00:00Z');                 // ۰۸:۳۰ صبحِ تهران
+  const hrs = (h) => new Date(NOWT - h * 3600000).toISOString();
+  const mk = (id, o) => Object.assign({ id, zone: 3, block: 10, floor: 1, direction: 'شمالی', price: 6000, phone: '0912' + id, createdAt: hrs(2), raw: '' }, o);
+  const listings = [
+    mk('1', { createdAt: hrs(2) }),                                                      // جدید
+    mk('2', { block: 11, createdAt: hrs(5), priceDrop: { fromText: '7', toText: '6/500' }, price: 6500 }),   // جدید + کاهش
+    mk('3', { block: 12, createdAt: hrs(30) }),                                          // قدیمیِ ۳۰ ساعته: جدید نیست
+    mk('4', { block: 13, createdAt: hrs(1), archived: true }),                           // آرشیو: نادیده
+    mk('5', { zone: 4, block: 20, createdAt: hrs(3), price: 4000, tags: ['loan'] }),     // جدید، ارزون، با فیلتر
+    // فایلِ قدیمیِ دوباره‌پست‌شده: همون کلید، اولین‌بار ۵ روز پیش → جدید نیست
+    mk('6', { block: 30, createdAt: hrs(120) }), mk('6b', { block: 30, createdAt: hrs(1), phone: '0912' + '6' }),
+  ];
+  listings[5].phone = listings[6].phone = '09126';
+  const S = ctx.buildTodaySummary({
+    listings, nowMs: NOWT,
+    rules: [{ id: 'r', zones: ['4'], tags: ['loan'] }, { id: 'r2', zones: ['5'] }],
+    alarms: [
+      { id: 'a1', time: new Date(NOWT - 3600000).toISOString(), label: 'دیروز-امروز', firedAt: null },       // گذشته
+      { id: 'a2', time: new Date(NOWT + 5 * 3600000).toISOString(), label: 'امروز عصر', firedAt: null },     // امروز
+      { id: 'a3', time: new Date(NOWT + 30 * 3600000).toISOString(), label: 'فردا', firedAt: null },         // فردا: نه
+      { id: 'a4', time: new Date(NOWT - 3600000).toISOString(), label: 'زنگ خورده', firedAt: 'x' },         // زنگ‌خورده: نه
+    ],
+    buyersFor: (l) => (l.zone === 3 && l.price <= 6500 ? [{ phone: '0999', text: 'خریدار' }] : []),
+    cmpFor: (l) => (l.zone === 4 ? { pct: -20 } : { pct: -3 }),
+    tagsFor: (l) => l.tags || [],
+  });
+  const ids = S.fresh.map(l => l.id).sort().join();
+  assert(ids === '1,2,5', 'فقط فایل‌های ۲۴ ساعتِ اخیر، بدونِ آرشیو و بدونِ بازپستِ قدیمی: ' + ids);
+  assert(S.fresh[0].id === '1' && S.fresh[2].id === '2', 'جدیدترین اول: ' + S.fresh.map(l => l.id));
+  assert(S.byZone[3] === 2 && S.byZone[4] === 1, 'تفکیکِ زون: ' + JSON.stringify(S.byZone));
+  assert(S.drops.length === 1 && S.drops[0].id === '2', 'کاهش قیمت');
+  assert(S.cheap.length === 1 && S.cheap[0].id === '5', 'ارزون‌تر از بلوک (≥۱۰٪)');
+  assert(S.matches.length === 2 && S.matches.every(m => m.buyers.length === 1), 'خریدارِ مناسبِ فایل‌های جدید: ' + S.matches.length);
+  assert(S.ruleHits.length === 1 && S.ruleHits[0].rule.id === 'r' && S.ruleHits[0].listings[0].id === '5', 'فقط فیلترِ دارای نتیجه');
+  assert(S.followUps.map(a => a.id).join() === 'a1,a2' && S.followUps[0].late === true && S.followUps[1].late === false, 'پیگیری‌های امروز + گذشته، نه فردا/زنگ‌خورده: ' + S.followUps.map(a => a.id));
+  const empty = ctx.buildTodaySummary({ listings: [], nowMs: NOWT, rules: [], alarms: [], buyersFor: () => [], cmpFor: () => null, tagsFor: () => [] });
+  assert(empty.fresh.length === 0 && empty.followUps.length === 0 && empty.stale === 0, 'حالتِ خالی کرش نمی‌کنه');
+  // پایانِ «امروز» به وقتِ تهران: ۲۰ اکتبر ۲۳:۵۰ تهران هنوز امروزه، ۲۱ اکتبر ۰۰:۱۰ تهران نه
+  const late = ctx.buildTodaySummary({ listings: [], nowMs: Date.parse('2026-10-20T00:30:00Z'), rules: [], alarms: [
+    { id: 'x', time: '2026-10-20T20:00:00Z', label: 'نزدیکِ نیمه‌شب' }, { id: 'y', time: '2026-10-20T21:30:00Z', label: 'بعد از نیمه‌شب' } ],
+    buyersFor: () => [], cmpFor: () => null, tagsFor: () => [] });
+  assert(late.followUps.map(a => a.id).join() === 'x', 'مرزِ نیمه‌شبِ تهران: ' + late.followUps.map(a => a.id));
+}
+
+// ---- رندرِ داشبورد (با تابع‌های وابسته‌ی ساختگی) ----
+{
+  const NOWR = Date.now();
+  const box = { innerHTML: '' };
+  const stubs = {
+    allListings: [
+      { id: 'n1', zone: 3, block: 10, floor: 1, price: 6000, createdAt: new Date(NOWR - 3600000).toISOString(), phone: '0912' },
+      { id: 'n2', zone: 3, block: 11, floor: 2, price: 6500, createdAt: new Date(NOWR - 7200000).toISOString(), phone: '0913', priceDrop: { fromText: '7', toText: '6/500' } },
+    ],
+    alertRules: [{ id: 'r', zones: ['3'] }],
+    alarms: [{ id: 'a', time: new Date(NOWR - 60000).toISOString(), label: '<b>x</b>', firedAt: null }],
+    esc: (x) => String(x).replace(/</g, '&lt;'),
+    findMatchingBuyers: () => [{ phone: '0999', text: 'خریدار زون 3' }], priceVsBlock: () => null, listingTags: () => [],
+    listingCardHtml: (l) => `<card ${l.id}>`, buyerSnippet: (t) => t, formatAlarmTime: () => 'ساعت',
+    document: { getElementById: (id) => (id === 'todayBody' ? box : null), querySelectorAll: () => [] },
+    sortMode: 'block', setUserTab() {}, render() {},
+  };
+  const c2 = load(['renderToday', 'todaySectionHtml', 'zoneLabel', 'tehranMidnightTimestamp', 'isStale', 'lastSeenOf', 'daysSince', 'buildTodaySummary', 'groupListings', 'buildGroup', 'dedupKey', 'adMatchesRule', 'describeRule', 'fmtMillions'], Object.assign({ Intl, Date, Math, Object }, stubs));
+  c2.renderToday();
+  const h = box.innerHTML;
+  assert(h.includes('<b>2</b><span>فایلِ جدید') && h.includes('<b>1</b><span>کاهش قیمت'), 'شمارنده‌ها رندر بشن');
+  assert(h.includes('<card n1>') && h.includes('<card n2>'), 'کارت‌ها رندر بشن');
+  assert(h.includes('گذشته') && h.includes('&lt;b>x') && !h.includes('<b>x</b>'), 'پیگیریِ گذشته رندر و متنش escape می‌شه');
+  assert(h.includes('0999') && h.includes('🙋'), 'بخشِ خریدارِ مناسب');
+  assert(h.includes('🎯 زون 3'), 'بخشِ فیلتر');
+}
 
 // قالبِ قیمت
 assert(ctx.fmtMillions(6250) === '6/250' && ctx.fmtMillions(8000) === '8/000' && ctx.fmtMillions(950) === '950', 'قالبِ قیمت');
