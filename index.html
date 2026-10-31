@@ -1031,7 +1031,9 @@ const FIREBASE_CONFIG = {
   messagingSenderId: "943540130003",
   appId: "1:943540130003:web:89c23d6e54797d66cc0426"
 };
-const ADMIN_EMAIL = 'valakisgod@gmail.com';
+// ایمیلِ ادمین‌ها (باید با isAdmin() توی firestore.rules یکی باشه؛ چکِ واقعی سمتِ سرور توی rules انجام می‌شه)
+const ADMIN_EMAILS = ['valakisgod@gmail.com', 'khashayarkeshwary@gmail.com'];
+const ADMIN_EMAIL = ADMIN_EMAILS[0];   // فقط برای مقدارِ پیش‌فرضِ فیلدِ ایمیلِ فرمِ ورود
 
 window.__createFirebaseBackend = async function(sdk){
   const app = sdk.initializeApp(FIREBASE_CONFIG);
@@ -1084,7 +1086,7 @@ window.__createFirebaseBackend = async function(sdk){
 
   // ---------------- Auth ----------------
   const user = {
-    canEdit: async () => !!(auth.currentUser && auth.currentUser.email === ADMIN_EMAIL),
+    canEdit: async () => !!(auth.currentUser && ADMIN_EMAILS.includes((auth.currentUser.email || '').toLowerCase())),
     id: async () => auth.currentUser ? auth.currentUser.uid : null,
   };
   const authApi = {
